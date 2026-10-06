@@ -38,6 +38,12 @@ class WeatherHomeScreen extends ConsumerWidget {
                 ? data.hourly.first.visibility / 1000
                 : 0.0;
             final today = data.daily.first;
+            final weeklyMin = data.daily
+                .map((day) => day.minTemperature)
+                .reduce((a, b) => a < b ? a : b);
+            final weeklyMax = data.daily
+                .map((day) => day.maxTemperature)
+                .reduce((a, b) => a > b ? a : b);
             final summary = buildWeatherSummary(
               current: current,
               today: today,
@@ -367,19 +373,23 @@ class WeatherHomeScreen extends ConsumerWidget {
                                       ) +
                                       '٪',
                                 ),
-                                const Spacer(),
-                                Text(
-                                  toPersianDigits(
-                                        day.minTemperature.round(),
-                                      ) +
-                                      '°',
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _TemperatureRangeBar(
+                                    min: day.minTemperature,
+                                    max: day.maxTemperature,
+                                    globalMin: weeklyMin,
+                                    globalMax: weeklyMax,
+                                  ),
                                 ),
-                                const SizedBox(width: 12),
+                                const SizedBox(width: 10),
                                 Text(
-                                  toPersianDigits(
-                                        day.maxTemperature.round(),
-                                      ) +
-                                      '°',
+                                  '${toPersianDigits(day.minTemperature.round())}°',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${toPersianDigits(day.maxTemperature.round())}°',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w900,
                                   ),
@@ -690,5 +700,71 @@ Color _metricAccent(String title) {
       return const Color(0xFF55B8FF);
     default:
       return const Color(0xFF4B7BFF);
+  }
+}
+
+
+class _TemperatureRangeBar extends StatelessWidget {
+  const _TemperatureRangeBar({
+    required this.min,
+    required this.max,
+    required this.globalMin,
+    required this.globalMax,
+  });
+
+  final double min;
+  final double max;
+  final double globalMin;
+  final double globalMax;
+
+  @override
+  Widget build(BuildContext context) {
+    final range = (globalMax - globalMin).abs() < .1
+        ? 1.0
+        : globalMax - globalMin;
+    final start = ((min - globalMin) / range).clamp(0.0, 1.0);
+    final end = ((max - globalMin) / range).clamp(0.0, 1.0);
+
+    return SizedBox(
+      height: 8,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          final left = width * start;
+          final barWidth = (width * (end - start)).clamp(8.0, width);
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: left,
+                width: barWidth,
+                top: 0,
+                bottom: 0,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xFF55B8FF),
+                        Color(0xFFFFC95A),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 }
