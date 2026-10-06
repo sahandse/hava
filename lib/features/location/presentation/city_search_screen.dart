@@ -16,8 +16,15 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
 
   void _run(String value) {
     setState(() {
-      _search = ref.read(cityRepositoryProvider).search(value);
+      _search = value.trim().isEmpty
+          ? null
+          : ref.read(cityRepositoryProvider).search(value);
     });
+  }
+
+  void _select(City city) {
+    ref.read(selectedCityProvider.notifier).select(city);
+    Navigator.pop(context);
   }
 
   @override
@@ -51,14 +58,39 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
                 title: Text(city.name),
                 subtitle: Text(city.subtitle),
                 trailing: const Icon(Icons.star_rounded),
-                onTap: () {
-                  ref.read(selectedCityProvider.notifier).select(city);
-                  Navigator.pop(context);
-                },
+                onTap: () => _select(city),
                 onLongPress: () =>
                     ref.read(favoriteCitiesProvider.notifier).toggle(city),
               ),
             ),
+          ],
+          if (_search == null) ...[
+            const SizedBox(height: 24),
+            const Text(
+              'شهرهای محبوب',
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            ...popularCities.map((city) {
+              final saved = favorites.any(
+                (item) =>
+                    item.latitude == city.latitude &&
+                    item.longitude == city.longitude,
+              );
+              return ListTile(
+                leading: const Icon(Icons.explore_outlined),
+                title: Text(city.name),
+                subtitle: Text(city.subtitle),
+                trailing: IconButton(
+                  icon: Icon(
+                    saved ? Icons.star_rounded : Icons.star_border_rounded,
+                  ),
+                  onPressed: () =>
+                      ref.read(favoriteCitiesProvider.notifier).toggle(city),
+                ),
+                onTap: () => _select(city),
+              );
+            }),
           ],
           const SizedBox(height: 16),
           if (_search != null)
@@ -100,10 +132,7 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
                             .read(favoriteCitiesProvider.notifier)
                             .toggle(city),
                       ),
-                      onTap: () {
-                        ref.read(selectedCityProvider.notifier).select(city);
-                        Navigator.pop(context);
-                      },
+                      onTap: () => _select(city),
                     );
                   }).toList(),
                 );
