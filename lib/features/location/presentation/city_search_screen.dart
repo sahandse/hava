@@ -52,7 +52,7 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
                 subtitle: Text(city.subtitle),
                 trailing: const Icon(Icons.star_rounded),
                 onTap: () {
-                  ref.read(selectedCityProvider.notifier).state = city;
+                  ref.read(selectedCityProvider.notifier).select(city);
                   Navigator.pop(context);
                 },
                 onLongPress: () =>
@@ -71,6 +71,7 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
                     child: Center(child: CircularProgressIndicator()),
                   );
                 }
+
                 final items = snapshot.data ?? const <City>[];
                 if (items.isEmpty) {
                   return const Padding(
@@ -78,6 +79,7 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
                     child: Center(child: Text('شهری پیدا نشد')),
                   );
                 }
+
                 return Column(
                   children: items.map((city) {
                     final saved = favorites.any(
@@ -85,6 +87,7 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
                           item.latitude == city.latitude &&
                           item.longitude == city.longitude,
                     );
+
                     return ListTile(
                       leading: const Icon(Icons.place_outlined),
                       title: Text(city.name),
@@ -98,7 +101,7 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
                             .toggle(city),
                       ),
                       onTap: () {
-                        ref.read(selectedCityProvider.notifier).state = city;
+                        ref.read(selectedCityProvider.notifier).select(city);
                         Navigator.pop(context);
                       },
                     );

@@ -25,15 +25,32 @@ class FavoriteCitiesController extends AsyncNotifier<List<City>> {
       (item) =>
           item.latitude == city.latitude && item.longitude == city.longitude,
     );
+
     if (index >= 0) {
       current.removeAt(index);
     } else {
       current.add(city);
     }
+
     state = AsyncData(current);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_key, current.map((item) => item.encode()).toList());
+    await prefs.setStringList(
+      _key,
+      current.map((item) => item.encode()).toList(),
+    );
   }
 }
 
-final selectedCityProvider = StateProvider<City?>((ref) => null);
+final selectedCityProvider =
+    NotifierProvider<SelectedCityController, City?>(
+  SelectedCityController.new,
+);
+
+class SelectedCityController extends Notifier<City?> {
+  @override
+  City? build() => null;
+
+  void select(City? city) {
+    state = city;
+  }
+}
