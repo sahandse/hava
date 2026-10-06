@@ -298,7 +298,6 @@ class _RadarScreenState extends ConsumerState<RadarScreen> {
                       userAgentPackageName: 'com.sahand.hava',
                       maxNativeZoom: 7,
                       maxZoom: 12,
-                      opacity: .88,
                       tileDisplay: const TileDisplay.fadeIn(
                         duration: Duration(milliseconds: 180),
                       ),
