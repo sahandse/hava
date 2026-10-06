@@ -21,7 +21,14 @@ class AirQualityRepository {
       queryParameters: {
         'latitude': latitude,
         'longitude': longitude,
-        'current': 'us_aqi,pm2_5,pm10,uv_index',
+        'current': [
+          'us_aqi',
+          'pm2_5',
+          'pm10',
+          'nitrogen_dioxide',
+          'ozone',
+          'uv_index',
+        ].join(','),
         'timezone': 'auto',
       },
     );
@@ -32,6 +39,8 @@ class AirQualityRepository {
       usAqi: (current['us_aqi'] as num?)?.toInt() ?? 0,
       pm25: (current['pm2_5'] as num?)?.toDouble() ?? 0,
       pm10: (current['pm10'] as num?)?.toDouble() ?? 0,
+      nitrogenDioxide: (current['nitrogen_dioxide'] as num?)?.toDouble() ?? 0,
+      ozone: (current['ozone'] as num?)?.toDouble() ?? 0,
       uvIndex: (current['uv_index'] as num?)?.toDouble() ?? 0,
     );
   }

@@ -1,6 +1,8 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:hava/core/format/persian_digits.dart';
+import 'package:hava/core/services/alert_preferences.dart';
+import 'package:hava/features/air_quality/data/air_quality_repository.dart';
 import 'package:hava/features/weather/data/open_meteo_weather_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
@@ -13,6 +15,7 @@ final _notifications = FlutterLocalNotificationsPlugin();
 void backgroundCallbackDispatcher() {
   Workmanager().executeTask((taskName, inputData) async {
     if (taskName != _taskName) return true;
+
     final prefs = await SharedPreferences.getInstance();
     final lat = prefs.getDouble('last_lat');
     final lon = prefs.getDouble('last_lon');
@@ -34,15 +37,79 @@ void backgroundCallbackDispatcher() {
         'condition',
         weatherLabel(weather.current.weatherCode),
       ),
+      HomeWidget.saveWidgetData<String>(
+        'max_temp',
+        toPersianDigits(weather.daily.first.maxTemperature.round()) + '°',
+      ),
+      HomeWidget.saveWidgetData<String>(
+        'min_temp',
+        toPersianDigits(weather.daily.first.minTemperature.round()) + '°',
+      ),
+      HomeWidget.saveWidgetData<String>(
+        'rain',
+        toPersianDigits(weather.daily.first.precipitationProbability) + '٪',
+      ),
     ]);
-    await HomeWidget.updateWidget(
-      qualifiedAndroidName: 'com.sahand.hava.HavaWidgetProvider',
-    );
 
-    final likelyRain = weather.hourly.take(4).any(
-          (hour) => hour.precipitationProbability >= 70,
+    for (final provider in [
+      'com.sahand.hava.HavaWidgetProvider',
+      'com.sahand.hava.HavaMediumWidgetProvider',
+      'com.sahand.hava.HavaLargeWidgetProvider',
+    ]) {
+      await HomeWidget.updateWidget(qualifiedAndroidName: provider);
+    }
+
+    if (!(prefs.getBool('weather_alerts') ?? false)) return true;
+
+    final config = await AlertPreferences.load();
+    final upcoming = weather.hourly.take(6).toList();
+    final messages = <String>[];
+
+    final maxRain = upcoming.isEmpty
+        ? 0
+        : upcoming
+            .map((hour) => hour.precipitationProbability)
+            .reduce((a, b) => a > b ? a : b);
+    if (config.rainEnabled && maxRain >= config.rainThreshold) {
+      messages.add('احتمال بارش به $maxRain٪ رسیده');
+    }
+
+    final snow = upcoming.any(
+      (hour) => hour.weatherCode >= 71 && hour.weatherCode <= 86,
+    );
+    if (config.snowEnabled && snow) {
+      messages.add('احتمال بارش برف وجود دارد');
+    }
+
+    if (config.windEnabled &&
+        weather.daily.first.maxWindSpeed >= config.windThreshold) {
+      messages.add(
+        'باد تا ${weather.daily.first.maxWindSpeed.round()} km/h می‌رسد',
+      );
+    }
+
+    if (config.uvEnabled &&
+        weather.daily.first.uvIndexMax >= config.uvThreshold) {
+      messages.add(
+        'شاخص UV تا ${weather.daily.first.uvIndexMax.toStringAsFixed(1)} می‌رسد',
+      );
+    }
+
+    if (config.aqiEnabled) {
+      try {
+        final air = await AirQualityRepository().fetch(
+          latitude: lat,
+          longitude: lon,
         );
-    if (likelyRain && (prefs.getBool('weather_alerts') ?? false)) {
+        if (air.usAqi >= config.aqiThreshold) {
+          messages.add('AQI به ${air.usAqi} رسیده');
+        }
+      } catch (_) {
+        // Weather alerts should still work if AQI is temporarily unavailable.
+      }
+    }
+
+    if (messages.isNotEmpty) {
       await _notifications.initialize(
         settings: const InitializationSettings(
           android: AndroidInitializationSettings('app_icon'),
@@ -50,19 +117,20 @@ void backgroundCallbackDispatcher() {
       );
       await _notifications.show(
         id: 1001,
-        title: 'احتمال بارش',
-        body: 'در چند ساعت آینده احتمال بارش بالاست.',
+        title: 'هشدار هوا برای $city',
+        body: messages.join(' • '),
         notificationDetails: const NotificationDetails(
           android: AndroidNotificationDetails(
             'weather_alerts',
             'هشدارهای هواشناسی',
-            channelDescription: 'هشدار بارش و تغییرات مهم هوا',
+            channelDescription: 'هشدار بارش، باد، UV و کیفیت هوا',
             importance: Importance.high,
             priority: Priority.high,
           ),
         ),
       );
     }
+
     return true;
   });
 }
