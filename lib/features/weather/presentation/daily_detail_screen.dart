@@ -27,10 +27,20 @@ class DailyDetailScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(30),
+              gradient: LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: [
+                  Theme.of(context).colorScheme.primaryContainer,
+                  Theme.of(context).colorScheme.tertiaryContainer,
+                ],
+              ),
+            ),
+            child: Row(
                 children: [
                   const Icon(Icons.calendar_today_rounded, size: 34),
                   const SizedBox(width: 14),
@@ -54,7 +64,6 @@ class DailyDetailScreen extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
           ),
           const SizedBox(height: 12),
           TemperatureTrendCard(hours: dayHours),
@@ -159,7 +168,19 @@ class _Tile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-        child: Padding(
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            gradient: LinearGradient(
+              begin: Alignment.topRight,
+              end: Alignment.bottomLeft,
+              colors: [
+                Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: .55),
+                Theme.of(context).colorScheme.surface,
+              ],
+            ),
+          ),
+          child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,6 +194,7 @@ class _Tile extends StatelessWidget {
               ),
             ],
           ),
+        ),
         ),
       );
 }
