@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hava/features/location/application/city_controller.dart';
 import 'package:hava/features/location/data/iran_location_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class IranLocationOnboardingScreen extends ConsumerStatefulWidget {
   const IranLocationOnboardingScreen({
@@ -65,6 +66,8 @@ class _IranLocationOnboardingScreenState
           );
       await ref.read(currentLocationProvider.notifier).disable();
       await ref.read(selectedCityProvider.notifier).select(resolved);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('iran_location_onboarding_completed', true);
       if (!mounted) return;
       widget.onSelectionCompleted();
     } catch (_) {
