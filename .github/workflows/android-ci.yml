@@ -23,7 +23,9 @@ jobs:
         run: flutter --version
 
       - name: Complete Android scaffold
-        run: flutter create --platforms=android --org com.sahand .
+        run: |
+          flutter create --platforms=android --org com.sahand .
+          rm -f test/widget_test.dart
 
       - name: Install dependencies
         run: flutter pub get
