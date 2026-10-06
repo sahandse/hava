@@ -8,6 +8,7 @@ import 'package:hava/features/location/application/city_controller.dart';
 import 'package:hava/features/location/presentation/city_search_screen.dart';
 import 'package:hava/features/weather/application/weather_controller.dart';
 import 'package:hava/features/weather/domain/weather_summary.dart';
+import 'package:hava/features/weather/domain/weather_models.dart';
 import 'package:hava/features/weather/domain/moon_phase.dart';
 import 'package:hava/features/weather/presentation/daily_detail_screen.dart';
 import 'package:hava/features/weather/presentation/widgets/temperature_trend_card.dart';
