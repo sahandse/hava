@@ -24,32 +24,39 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true,
       body: IndexedStack(index: _index, children: _pages),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (value) => setState(() => _index = value),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.cloud_outlined),
-            selectedIcon: Icon(Icons.cloud_rounded),
-            label: 'هوا',
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(26),
+          child: NavigationBar(
+            selectedIndex: _index,
+            onDestinationSelected: (value) => setState(() => _index = value),
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.cloud_outlined),
+                selectedIcon: Icon(Icons.cloud_rounded),
+                label: 'هوا',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.location_city_outlined),
+                selectedIcon: Icon(Icons.location_city_rounded),
+                label: 'شهرها',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.radar_outlined),
+                selectedIcon: Icon(Icons.radar_rounded),
+                label: 'نقشه',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.tune_outlined),
+                selectedIcon: Icon(Icons.tune_rounded),
+                label: 'تنظیمات',
+              ),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(Icons.location_city_outlined),
-            selectedIcon: Icon(Icons.location_city_rounded),
-            label: 'شهرها',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.radar_outlined),
-            selectedIcon: Icon(Icons.radar_rounded),
-            label: 'رادار',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.tune_outlined),
-            selectedIcon: Icon(Icons.tune_rounded),
-            label: 'تنظیمات',
-          ),
-        ],
+        ),
       ),
     );
   }
