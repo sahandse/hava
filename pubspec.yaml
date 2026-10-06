@@ -1,7 +1,7 @@
 name: hava
 description: اپلیکیشن هواشناسی فارسی، مینیمال و مبتنی بر داده واقعی.
 publish_to: "none"
-version: 0.3.0+3
+version: 1.0.0+1
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
