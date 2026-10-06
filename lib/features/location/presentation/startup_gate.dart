@@ -25,9 +25,16 @@ class _StartupGateState extends ConsumerState<StartupGate> {
 
   Future<void> _restore() async {
     final prefs = await SharedPreferences.getInstance();
+    final completed = prefs.getBool('iran_location_onboarding_completed') ?? false;
     final savedCity = prefs.getString(SelectedCityController.selectedCityKey);
     final currentLocation =
         prefs.getBool(CurrentLocationController.currentLocationKey) ?? false;
+
+    if (!completed) {
+      if (!mounted) return;
+      setState(() => _ready = true);
+      return;
+    }
 
     if (savedCity != null) {
       try {
