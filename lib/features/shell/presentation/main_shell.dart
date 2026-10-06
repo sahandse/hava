@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:hava/features/location/presentation/city_search_screen.dart';
 import 'package:hava/features/radar/presentation/radar_screen.dart';
 import 'package:hava/features/settings/presentation/settings_screen.dart';
 import 'package:hava/features/weather/presentation/weather_home_screen.dart';
@@ -16,7 +15,6 @@ class _MainShellState extends State<MainShell> {
 
   static const _pages = [
     WeatherHomeScreen(),
-    CitySearchScreen(),
     RadarScreen(),
     SettingsScreen(),
   ];
@@ -38,11 +36,6 @@ class _MainShellState extends State<MainShell> {
                 icon: Icon(Icons.cloud_outlined),
                 selectedIcon: Icon(Icons.cloud_rounded),
                 label: 'هوا',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.location_city_outlined),
-                selectedIcon: Icon(Icons.location_city_rounded),
-                label: 'شهرها',
               ),
               NavigationDestination(
                 icon: Icon(Icons.radar_outlined),
