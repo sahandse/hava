@@ -37,6 +37,52 @@ class City {
       );
 
   String encode() => jsonEncode(toJson());
+
   factory City.decode(String value) =>
       City.fromJson(jsonDecode(value) as Map<String, dynamic>);
 }
+
+const popularCities = <City>[
+  City(
+    name: 'تهران',
+    country: 'ایران',
+    admin1: 'تهران',
+    latitude: 35.6892,
+    longitude: 51.3890,
+  ),
+  City(
+    name: 'مشهد',
+    country: 'ایران',
+    admin1: 'خراسان رضوی',
+    latitude: 36.2605,
+    longitude: 59.6168,
+  ),
+  City(
+    name: 'اصفهان',
+    country: 'ایران',
+    admin1: 'اصفهان',
+    latitude: 32.6546,
+    longitude: 51.6680,
+  ),
+  City(
+    name: 'شیراز',
+    country: 'ایران',
+    admin1: 'فارس',
+    latitude: 29.5918,
+    longitude: 52.5837,
+  ),
+  City(
+    name: 'تبریز',
+    country: 'ایران',
+    admin1: 'آذربایجان شرقی',
+    latitude: 38.0800,
+    longitude: 46.2919,
+  ),
+  City(
+    name: 'رشت',
+    country: 'ایران',
+    admin1: 'گیلان',
+    latitude: 37.2808,
+    longitude: 49.5832,
+  ),
+];
