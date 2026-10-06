@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hava/core/date/persian_date.dart';
 import 'package:hava/core/format/persian_digits.dart';
 import 'package:hava/features/air_quality/application/air_quality_controller.dart';
+import 'package:hava/features/air_quality/presentation/air_quality_detail_screen.dart';
 import 'package:hava/features/location/application/city_controller.dart';
 import 'package:hava/features/location/presentation/city_search_screen.dart';
 import 'package:hava/features/weather/application/weather_controller.dart';
 import 'package:hava/features/weather/domain/weather_summary.dart';
+import 'package:hava/features/weather/domain/moon_phase.dart';
 import 'package:hava/features/weather/presentation/daily_detail_screen.dart';
 import 'package:hava/features/weather/presentation/widgets/temperature_trend_card.dart';
 
@@ -267,6 +269,14 @@ class WeatherHomeScreen extends ConsumerWidget {
                           title: 'کیفیت هوا',
                           value: toPersianDigits(value.usAqi),
                           subtitle: value.label,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) => AirQualityDetailScreen(
+                                airQuality: value,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                       aqi.when(
@@ -378,25 +388,7 @@ class WeatherHomeScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.wb_twilight_rounded),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'طلوع ' +
-                                  _time(data.daily.first.sunrise) +
-                                  '  •  غروب ' +
-                                  _time(data.daily.first.sunset),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  _SunMoonCard(day: data.daily.first),
                 ],
               ),
             );
@@ -455,15 +447,20 @@ class _InfoCard extends StatelessWidget {
     required this.title,
     required this.value,
     required this.subtitle,
+    this.onTap,
   });
   final IconData icon;
   final String title;
   final String value;
   final String subtitle;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => Card(
-        child: Padding(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -486,6 +483,7 @@ class _InfoCard extends StatelessWidget {
               Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
+        ),
         ),
       );
 }
@@ -609,4 +607,51 @@ List<Color> _heroColors(
     scheme.primaryContainer,
     scheme.secondaryContainer,
   ];
+}
+
+
+class _SunMoonCard extends StatelessWidget {
+  const _SunMoonCard({required this.day});
+
+  final DailyWeather day;
+
+  @override
+  Widget build(BuildContext context) {
+    final moon = moonPhaseFor(day.date);
+    final daylightHours = day.daylightDuration / 3600;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.wb_twilight_rounded),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'طلوع ${_time(day.sunrise)}  •  غروب ${_time(day.sunset)}',
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            Row(
+              children: [
+                Text(moon.symbol, style: const TextStyle(fontSize: 28)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '${moon.name} • روشنایی روز '
+                    '${toPersianDigits(daylightHours.toStringAsFixed(1))} ساعت',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
