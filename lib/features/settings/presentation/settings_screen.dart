@@ -183,7 +183,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const ListTile(
             leading: Icon(Icons.info_outline_rounded),
             title: Text('نسخه برنامه'),
-            subtitle: Text('۱.۰.۰'),
+            subtitle: Text('۱.۱.۰'),
           ),
         ],
       ),
