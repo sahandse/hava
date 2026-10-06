@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hava/core/format/persian_digits.dart';
 import 'package:hava/features/weather/application/weather_controller.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RadarScreen extends ConsumerStatefulWidget {
   const RadarScreen({super.key});
@@ -24,8 +26,13 @@ class _RadarScreenState extends ConsumerState<RadarScreen> {
   int _frameIndex = 0;
   bool _loading = true;
   bool _playing = false;
+  bool _showCoverage = false;
   Object? _error;
   Timer? _timer;
+  double _playbackSpeed = 1;
+  _ProbeMetric _metric = _ProbeMetric.radar;
+  _WeatherProbe? _probe;
+  bool _probeLoading = false;
 
   @override
   void initState() {
@@ -39,12 +46,26 @@ class _RadarScreenState extends ConsumerState<RadarScreen> {
       _error = null;
     });
 
+    Map<String, dynamic>? data;
+
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         'https://api.rainviewer.com/public/weather-maps.json',
       );
+      data = response.data;
+      if (data != null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('radar_metadata_cache', jsonEncode(data));
+      }
+    } catch (_) {
+      final prefs = await SharedPreferences.getInstance();
+      final cached = prefs.getString('radar_metadata_cache');
+      if (cached != null) {
+        data = jsonDecode(cached) as Map<String, dynamic>;
+      }
+    }
 
-      final data = response.data;
+    try {
       if (data == null) {
         throw StateError('اطلاعات رادار دریافت نشد.');
       }
@@ -84,6 +105,12 @@ class _RadarScreenState extends ConsumerState<RadarScreen> {
     }
   }
 
+  Duration get _frameDuration {
+    if (_playbackSpeed == .5) return const Duration(milliseconds: 1400);
+    if (_playbackSpeed == 2) return const Duration(milliseconds: 350);
+    return const Duration(milliseconds: 700);
+  }
+
   void _togglePlayback() {
     if (_frames.length < 2) return;
 
@@ -94,12 +121,71 @@ class _RadarScreenState extends ConsumerState<RadarScreen> {
     }
 
     setState(() => _playing = true);
-    _timer = Timer.periodic(const Duration(milliseconds: 750), (_) {
+    _startPlayback();
+  }
+
+  void _startPlayback() {
+    _timer?.cancel();
+    _timer = Timer.periodic(_frameDuration, (_) {
       if (!mounted || _frames.isEmpty) return;
       setState(() {
         _frameIndex = (_frameIndex + 1) % _frames.length;
       });
     });
+  }
+
+  void _setSpeed(double speed) {
+    setState(() => _playbackSpeed = speed);
+    if (_playing) _startPlayback();
+  }
+
+  Future<void> _loadProbe(LatLng point) async {
+    if (_metric == _ProbeMetric.radar) return;
+
+    setState(() => _probeLoading = true);
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        'https://api.open-meteo.com/v1/forecast',
+        queryParameters: {
+          'latitude': point.latitude,
+          'longitude': point.longitude,
+          'timezone': 'auto',
+          'current': [
+            'temperature_2m',
+            'wind_speed_10m',
+            'cloud_cover',
+            'surface_pressure',
+          ].join(','),
+        },
+      );
+      final current =
+          response.data?['current'] as Map<String, dynamic>? ?? const {};
+      if (!mounted) return;
+      setState(() {
+        _probe = _WeatherProbe(
+          point: point,
+          temperature: (current['temperature_2m'] as num?)?.toDouble() ?? 0,
+          windSpeed: (current['wind_speed_10m'] as num?)?.toDouble() ?? 0,
+          cloudCover: (current['cloud_cover'] as num?)?.toDouble() ?? 0,
+          pressure: (current['surface_pressure'] as num?)?.toDouble() ?? 0,
+        );
+        _probeLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _probeLoading = false);
+    }
+  }
+
+  void _selectMetric(_ProbeMetric metric) {
+    _timer?.cancel();
+    setState(() {
+      _metric = metric;
+      _playing = false;
+    });
+    if (metric != _ProbeMetric.radar) {
+      _loadProbe(_mapController.camera.center);
+    }
   }
 
   @override
@@ -115,10 +201,10 @@ class _RadarScreenState extends ConsumerState<RadarScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('رادار بارش'),
+        title: const Text('نقشه هوا'),
         actions: [
           IconButton(
-            tooltip: 'بروزرسانی رادار',
+            tooltip: 'بروزرسانی',
             onPressed: _loadRadar,
             icon: const Icon(Icons.refresh_rounded),
           ),
@@ -142,10 +228,7 @@ class _RadarScreenState extends ConsumerState<RadarScreen> {
             );
           }
 
-          final center = LatLng(
-            weatherData.latitude,
-            weatherData.longitude,
-          );
+          final center = LatLng(weatherData.latitude, weatherData.longitude);
           final frame = _frames[_frameIndex];
 
           return Stack(
@@ -157,6 +240,13 @@ class _RadarScreenState extends ConsumerState<RadarScreen> {
                   initialZoom: 6.5,
                   minZoom: 3,
                   maxZoom: 12,
+                  onTap: (_, point) => _loadProbe(point),
+                  onMapEvent: (event) {
+                    if (event is MapEventMoveEnd &&
+                        _metric != _ProbeMetric.radar) {
+                      _loadProbe(_mapController.camera.center);
+                    }
+                  },
                   interactionOptions: const InteractionOptions(
                     flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                   ),
@@ -168,15 +258,24 @@ class _RadarScreenState extends ConsumerState<RadarScreen> {
                     userAgentPackageName: 'com.sahand.hava',
                     maxNativeZoom: 19,
                   ),
-                  TileLayer(
-                    key: ValueKey(frame.path),
-                    urlTemplate:
-                        '$_host${frame.path}/256/{z}/{x}/{y}/2/1_1.png',
-                    userAgentPackageName: 'com.sahand.hava',
-                    maxNativeZoom: 7,
-                    maxZoom: 12,
-                    tileDisplay: const TileDisplay.fadeIn(),
-                  ),
+                  if (_metric == _ProbeMetric.radar)
+                    TileLayer(
+                      key: ValueKey(frame.path),
+                      urlTemplate:
+                          '$_host${frame.path}/256/{z}/{x}/{y}/2/1_1.png',
+                      userAgentPackageName: 'com.sahand.hava',
+                      maxNativeZoom: 7,
+                      maxZoom: 12,
+                      tileDisplay: const TileDisplay.fadeIn(),
+                    ),
+                  if (_showCoverage)
+                    TileLayer(
+                      urlTemplate:
+                          '$_host/v2/coverage/0/256/{z}/{x}/{y}/0/0_0.png',
+                      userAgentPackageName: 'com.sahand.hava',
+                      maxNativeZoom: 7,
+                      maxZoom: 12,
+                    ),
                   MarkerLayer(
                     markers: [
                       Marker(
@@ -191,12 +290,6 @@ class _RadarScreenState extends ConsumerState<RadarScreen> {
                               color: Theme.of(context).colorScheme.surface,
                               width: 4,
                             ),
-                            boxShadow: const [
-                              BoxShadow(
-                                blurRadius: 12,
-                                color: Color(0x33000000),
-                              ),
-                            ],
                           ),
                           child: const Icon(
                             Icons.my_location_rounded,
@@ -205,28 +298,72 @@ class _RadarScreenState extends ConsumerState<RadarScreen> {
                           ),
                         ),
                       ),
+                      if (_probe != null)
+                        Marker(
+                          point: _probe!.point,
+                          width: 18,
+                          height: 18,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.tertiary,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.surface,
+                                width: 3,
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ],
               ),
               Positioned(
-                top: 12,
-                right: 12,
-                left: 12,
-                child: _RadarStatusCard(
-                  frame: frame,
-                  frameIndex: _frameIndex,
-                  frameCount: _frames.length,
+                top: 10,
+                right: 10,
+                left: 10,
+                child: _MapModeBar(
+                  metric: _metric,
+                  onChanged: _selectMetric,
                 ),
               ),
+              if (_metric == _ProbeMetric.radar)
+                Positioned(
+                  top: 70,
+                  right: 10,
+                  left: 10,
+                  child: _RadarStatusCard(
+                    frame: frame,
+                    frameIndex: _frameIndex,
+                    frameCount: _frames.length,
+                    showCoverage: _showCoverage,
+                    onCoverageChanged: (value) {
+                      setState(() => _showCoverage = value);
+                    },
+                  ),
+                ),
+              if (_metric != _ProbeMetric.radar)
+                Positioned(
+                  top: 70,
+                  right: 10,
+                  left: 10,
+                  child: _ProbeCard(
+                    metric: _metric,
+                    probe: _probe,
+                    loading: _probeLoading,
+                  ),
+                ),
               Positioned(
                 right: 12,
-                bottom: 132,
+                bottom: 150,
                 child: Column(
                   children: [
                     FloatingActionButton.small(
                       heroTag: 'radar_location',
-                      onPressed: () => _mapController.move(center, 6.5),
+                      onPressed: () {
+                        _mapController.move(center, 6.5);
+                        _loadProbe(center);
+                      },
                       child: const Icon(Icons.my_location_rounded),
                     ),
                     const SizedBox(height: 8),
@@ -250,36 +387,148 @@ class _RadarScreenState extends ConsumerState<RadarScreen> {
                   ],
                 ),
               ),
-              Positioned(
-                right: 12,
-                left: 12,
-                bottom: 18,
-                child: _RadarTimeline(
-                  frames: _frames,
-                  currentIndex: _frameIndex,
-                  playing: _playing,
-                  onPlayPause: _togglePlayback,
-                  onChanged: (value) {
-                    setState(() => _frameIndex = value.round());
-                  },
+              if (_metric == _ProbeMetric.radar)
+                Positioned(
+                  right: 10,
+                  left: 10,
+                  bottom: 18,
+                  child: _RadarTimeline(
+                    frames: _frames,
+                    currentIndex: _frameIndex,
+                    playing: _playing,
+                    speed: _playbackSpeed,
+                    onPlayPause: _togglePlayback,
+                    onLatest: () {
+                      _timer?.cancel();
+                      setState(() {
+                        _playing = false;
+                        _frameIndex = _frames.length - 1;
+                      });
+                    },
+                    onSpeedChanged: _setSpeed,
+                    onChanged: (value) {
+                      setState(() => _frameIndex = value.round());
+                    },
+                  ),
                 ),
-              ),
-              Positioned(
-                left: 10,
-                bottom: 2,
-                child: Text(
-                  'نقشه: OpenStreetMap • رادار: RainViewer',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: .65),
-                      ),
+              if (_metric == _ProbeMetric.radar)
+                const Positioned(
+                  left: 10,
+                  bottom: 120,
+                  child: _RadarLegend(),
                 ),
-              ),
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+enum _ProbeMetric { radar, temperature, wind, clouds, pressure }
+
+class _MapModeBar extends StatelessWidget {
+  const _MapModeBar({
+    required this.metric,
+    required this.onChanged,
+  });
+
+  final _ProbeMetric metric;
+  final ValueChanged<_ProbeMetric> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Card(
+        child: SizedBox(
+          height: 50,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            children: [
+              _Chip('رادار', _ProbeMetric.radar, metric, onChanged),
+              _Chip('دما', _ProbeMetric.temperature, metric, onChanged),
+              _Chip('باد', _ProbeMetric.wind, metric, onChanged),
+              _Chip('ابر', _ProbeMetric.clouds, metric, onChanged),
+              _Chip('فشار', _ProbeMetric.pressure, metric, onChanged),
+            ],
+          ),
+        ),
+      );
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip(this.label, this.value, this.current, this.onChanged);
+
+  final String label;
+  final _ProbeMetric value;
+  final _ProbeMetric current;
+  final ValueChanged<_ProbeMetric> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 7),
+        child: ChoiceChip(
+          label: Text(label),
+          selected: current == value,
+          onSelected: (_) => onChanged(value),
+        ),
+      );
+}
+
+class _ProbeCard extends StatelessWidget {
+  const _ProbeCard({
+    required this.metric,
+    required this.probe,
+    required this.loading,
+  });
+
+  final _ProbeMetric metric;
+  final _WeatherProbe? probe;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    String title;
+    String value;
+
+    if (loading || probe == null) {
+      title = 'در حال دریافت داده نقطه';
+      value = '...';
+    } else {
+      switch (metric) {
+        case _ProbeMetric.temperature:
+          title = 'دما';
+          value = '${toPersianDigits(probe!.temperature.toStringAsFixed(1))}°';
+        case _ProbeMetric.wind:
+          title = 'باد';
+          value =
+              '${toPersianDigits(probe!.windSpeed.toStringAsFixed(1))} km/h';
+        case _ProbeMetric.clouds:
+          title = 'پوشش ابر';
+          value = '${toPersianDigits(probe!.cloudCover.round())}٪';
+        case _ProbeMetric.pressure:
+          title = 'فشار';
+          value = '${toPersianDigits(probe!.pressure.round())} hPa';
+        case _ProbeMetric.radar:
+          title = 'رادار';
+          value = '';
+      }
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Row(
+          children: [
+            const Icon(Icons.place_outlined),
+            const SizedBox(width: 8),
+            Text(title),
+            const Spacer(),
+            Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -290,11 +539,15 @@ class _RadarStatusCard extends StatelessWidget {
     required this.frame,
     required this.frameIndex,
     required this.frameCount,
+    required this.showCoverage,
+    required this.onCoverageChanged,
   });
 
   final _RadarFrame frame;
   final int frameIndex;
   final int frameCount;
+  final bool showCoverage;
+  final ValueChanged<bool> onCoverageChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -303,18 +556,23 @@ class _RadarStatusCard extends StatelessWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         child: Row(
           children: [
             const Icon(Icons.radar_rounded, size: 20),
             const SizedBox(width: 8),
             Text(
-              'فریم ${toPersianDigits(frameIndex + 1)} از '
-              '${toPersianDigits(frameCount)}',
+              '${toPersianDigits(frameIndex + 1)}/${toPersianDigits(frameCount)}',
               style: const TextStyle(fontWeight: FontWeight.w800),
             ),
-            const Spacer(),
+            const SizedBox(width: 8),
             Text('$hour:$minute'),
+            const Spacer(),
+            const Text('پوشش'),
+            Switch(
+              value: showCoverage,
+              onChanged: onCoverageChanged,
+            ),
           ],
         ),
       ),
@@ -327,43 +585,119 @@ class _RadarTimeline extends StatelessWidget {
     required this.frames,
     required this.currentIndex,
     required this.playing,
+    required this.speed,
     required this.onPlayPause,
+    required this.onLatest,
+    required this.onSpeedChanged,
     required this.onChanged,
   });
 
   final List<_RadarFrame> frames;
   final int currentIndex;
   final bool playing;
+  final double speed;
   final VoidCallback onPlayPause;
+  final VoidCallback onLatest;
+  final ValueChanged<double> onSpeedChanged;
   final ValueChanged<double> onChanged;
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+  Widget build(BuildContext context) => Card(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  IconButton.filledTonal(
+                    onPressed: onPlayPause,
+                    icon: Icon(
+                      playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    ),
+                  ),
+                  Expanded(
+                    child: Slider(
+                      value: currentIndex.toDouble(),
+                      min: 0,
+                      max: (frames.length - 1).toDouble(),
+                      divisions: frames.length > 1 ? frames.length - 1 : null,
+                      onChanged: onChanged,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'آخرین فریم',
+                    onPressed: onLatest,
+                    icon: const Icon(Icons.skip_next_rounded),
+                  ),
+                ],
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [.5, 1.0, 2.0].map((item) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: ChoiceChip(
+                      label: Text('${item}×'),
+                      selected: speed == item,
+                      onSelected: (_) => onSpeedChanged(item),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+      );
+}
+
+class _RadarLegend extends StatelessWidget {
+  const _RadarLegend();
+
+  @override
+  Widget build(BuildContext context) => Card(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _LegendBox(color: Color(0xFF58A7FF), label: 'کم'),
+              _LegendBox(color: Color(0xFF38C77A), label: 'متوسط'),
+              _LegendBox(color: Color(0xFFFFC928), label: 'زیاد'),
+              _LegendBox(color: Color(0xFFE84646), label: 'شدید'),
+            ],
+          ),
+        ),
+      );
+}
+
+class _LegendBox extends StatelessWidget {
+  const _LegendBox({
+    required this.color,
+    required this.label,
+  });
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 3),
         child: Row(
           children: [
-            IconButton.filledTonal(
-              onPressed: onPlayPause,
-              icon: Icon(
-                playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(3),
               ),
             ),
-            Expanded(
-              child: Slider(
-                value: currentIndex.toDouble(),
-                min: 0,
-                max: (frames.length - 1).toDouble(),
-                divisions: frames.length > 1 ? frames.length - 1 : null,
-                onChanged: onChanged,
-              ),
-            ),
+            const SizedBox(width: 3),
+            Text(label, style: Theme.of(context).textTheme.labelSmall),
           ],
         ),
-      ),
-    );
-  }
+      );
 }
 
 class _RadarError extends StatelessWidget {
@@ -376,35 +710,30 @@ class _RadarError extends StatelessWidget {
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.radar_outlined, size: 64),
-            const SizedBox(height: 14),
-            const Text(
-              'رادار در دسترس نیست',
-              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 18),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('تلاش دوباره'),
-            ),
-          ],
+  Widget build(BuildContext context) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.radar_outlined, size: 64),
+              const SizedBox(height: 14),
+              const Text(
+                'رادار در دسترس نیست',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20),
+              ),
+              const SizedBox(height: 8),
+              Text(message, textAlign: TextAlign.center),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('تلاش دوباره'),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
-  }
+      );
 }
 
 class _RadarFrame {
@@ -415,4 +744,20 @@ class _RadarFrame {
 
   final DateTime time;
   final String path;
+}
+
+class _WeatherProbe {
+  const _WeatherProbe({
+    required this.point,
+    required this.temperature,
+    required this.windSpeed,
+    required this.cloudCover,
+    required this.pressure,
+  });
+
+  final LatLng point;
+  final double temperature;
+  final double windSpeed;
+  final double cloudCover;
+  final double pressure;
 }
