@@ -93,7 +93,6 @@ class WeatherHomeScreen extends ConsumerWidget {
                                       .titleLarge
                                       ?.copyWith(
                                     fontWeight: FontWeight.w900,
-                                    color: palette.foreground,
                                   ),
                                 ),
                                 Text(
@@ -171,7 +170,10 @@ class WeatherHomeScreen extends ConsumerWidget {
                               style: Theme.of(context)
                                   .textTheme
                                   .titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w900),
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w900,
+                                    color: palette.foreground,
+                                  ),
                             ),
                           ],
                         ),
