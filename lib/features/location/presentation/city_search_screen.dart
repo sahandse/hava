@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hava/features/location/application/city_controller.dart';
+import 'package:hava/features/location/application/popular_city_weather_controller.dart';
+import 'package:hava/core/format/persian_digits.dart';
 import 'package:hava/features/location/domain/city.dart';
 
 class CitySearchScreen extends ConsumerStatefulWidget {
@@ -70,27 +72,89 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
               'شهرهای محبوب',
               style: TextStyle(fontWeight: FontWeight.w900),
             ),
-            const SizedBox(height: 8),
-            ...popularCities.map((city) {
-              final saved = favorites.any(
-                (item) =>
-                    item.latitude == city.latitude &&
-                    item.longitude == city.longitude,
-              );
-              return ListTile(
-                leading: const Icon(Icons.explore_outlined),
-                title: Text(city.name),
-                subtitle: Text(city.subtitle),
-                trailing: IconButton(
-                  icon: Icon(
-                    saved ? Icons.star_rounded : Icons.star_border_rounded,
-                  ),
-                  onPressed: () =>
-                      ref.read(favoriteCitiesProvider.notifier).toggle(city),
-                ),
-                onTap: () => _select(city),
-              );
-            }),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 150,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: popularCities.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                itemBuilder: (context, index) {
+                  final city = popularCities[index];
+                  final weather = ref.watch(popularCityWeatherProvider(city));
+                  final saved = favorites.any(
+                    (item) =>
+                        item.latitude == city.latitude &&
+                        item.longitude == city.longitude,
+                  );
+
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(24),
+                    onTap: () => _select(city),
+                    child: Container(
+                      width: 150,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  city.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                visualDensity: VisualDensity.compact,
+                                icon: Icon(
+                                  saved
+                                      ? Icons.star_rounded
+                                      : Icons.star_border_rounded,
+                                  size: 19,
+                                ),
+                                onPressed: () => ref
+                                    .read(favoriteCitiesProvider.notifier)
+                                    .toggle(city),
+                              ),
+                            ],
+                          ),
+                          const Spacer(),
+                          weather.when(
+                            loading: () => const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            error: (_, __) => const Text('—'),
+                            data: (data) => Text(
+                              '${toPersianDigits(data.current.temperature.round())}°',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineMedium
+                                  ?.copyWith(fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            city.admin1 ?? city.country,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
           ],
           const SizedBox(height: 16),
           if (_search != null)
