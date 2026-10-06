@@ -35,11 +35,58 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('تنظیمات')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
         children: [
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              gradient: LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: [
+                  Theme.of(context).colorScheme.primaryContainer,
+                  Theme.of(context).colorScheme.secondaryContainer,
+                ],
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .16),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Icon(Icons.cloud_rounded),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'هوا',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      SizedBox(height: 3),
+                      Text('ساده، فارسی و همیشه به‌روز'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
           const Text('ظاهر', style: TextStyle(fontWeight: FontWeight.w900)),
           const SizedBox(height: 8),
-          SegmentedButton<ThemeMode>(
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: SegmentedButton<ThemeMode>(
             segments: const [
               ButtonSegment(
                 value: ThemeMode.system,
@@ -61,6 +108,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onSelectionChanged: (value) {
               ref.read(themeModeProvider.notifier).setMode(value.first);
             },
+          ),
+            ),
           ),
           const SizedBox(height: 24),
           const Text(
