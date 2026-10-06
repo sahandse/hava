@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hava/features/location/application/city_controller.dart';
 import 'package:hava/features/location/domain/city.dart';
-import 'package:hava/features/location/presentation/city_search_screen.dart';
+import 'package:hava/features/location/presentation/iran_location_onboarding_screen.dart';
 import 'package:hava/features/shell/presentation/main_shell.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -57,8 +57,7 @@ class _StartupGateState extends ConsumerState<StartupGate> {
     }
 
     if (!_hasSelection) {
-      return CitySearchScreen(
-        selectionRequired: true,
+      return IranLocationOnboardingScreen(
         onSelectionCompleted: _completeSelection,
       );
     }
@@ -75,8 +74,8 @@ class _StartupSplash extends StatelessWidget {
     return Scaffold(
       body: Center(
         child: TweenAnimationBuilder<double>(
-          tween: Tween(begin: .7, end: 1),
-          duration: const Duration(milliseconds: 700),
+          tween: Tween(begin: .72, end: 1),
+          duration: const Duration(milliseconds: 760),
           curve: Curves.easeOutBack,
           builder: (context, value, child) => Transform.scale(
             scale: value,
@@ -85,13 +84,14 @@ class _StartupSplash extends StatelessWidget {
               child: child,
             ),
           ),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              shape: BoxShape.circle,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(32),
+            child: Image.asset(
+              'assets/branding/hava_logo.png',
+              width: 112,
+              height: 112,
+              fit: BoxFit.cover,
             ),
-            child: const Icon(Icons.cloud_rounded, size: 56),
           ),
         ),
       ),
