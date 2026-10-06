@@ -47,18 +47,16 @@ jobs:
           echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > android/app/hava-release-key.jks
 
       - name: Build release APK
-        if: env.RELEASE_KEYSTORE_BASE64 != ''
         env:
-          ANDROID_KEYSTORE_PATH: hava-release-key.jks
+          ANDROID_KEYSTORE_PATH: ${{ env.RELEASE_KEYSTORE_BASE64 != '' && 'hava-release-key.jks' || '' }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: flutter build apk --release
 
       - name: Build release AAB
-        if: env.RELEASE_KEYSTORE_BASE64 != ''
         env:
-          ANDROID_KEYSTORE_PATH: hava-release-key.jks
+          ANDROID_KEYSTORE_PATH: ${{ env.RELEASE_KEYSTORE_BASE64 != '' && 'hava-release-key.jks' || '' }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -72,7 +70,6 @@ jobs:
           retention-days: 7
 
       - name: Upload release APK
-        if: env.RELEASE_KEYSTORE_BASE64 != ''
         uses: actions/upload-artifact@v4
         with:
           name: hava-1.2.0-release-apk
@@ -80,7 +77,6 @@ jobs:
           retention-days: 30
 
       - name: Upload release AAB
-        if: env.RELEASE_KEYSTORE_BASE64 != ''
         uses: actions/upload-artifact@v4
         with:
           name: hava-1.2.0-release-aab
