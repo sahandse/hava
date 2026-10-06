@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hava/core/services/notification_service.dart';
 import 'package:hava/core/widgets/soft_reveal.dart';
 import 'package:hava/features/settings/application/settings_controller.dart';
+import 'package:hava/features/location/application/city_controller.dart';
+import 'package:hava/features/location/presentation/iran_location_onboarding_screen.dart';
+import 'package:hava/features/weather/application/weather_controller.dart';
 import 'package:hava/features/settings/presentation/alert_settings_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -32,6 +35,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final mode = ref.watch(themeModeProvider).value ?? ThemeMode.system;
     final lowData = ref.watch(lowDataModeProvider).value ?? false;
+    final selectedCity = ref.watch(selectedCityProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('تنظیمات')),
@@ -82,6 +86,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ],
             ),
           ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'موقعیت',
+            style: TextStyle(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.location_city_rounded),
+              title: const Text('شهر و موقعیت'),
+              subtitle: Text(
+                selectedCity == null
+                    ? 'انتخاب استان، شهرستان و شهر'
+                    : selectedCity.name,
+              ),
+              trailing: const Icon(Icons.chevron_left_rounded),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => IranLocationOnboardingScreen(
+                      onSelectionCompleted: () {
+                        ref.invalidate(weatherProvider);
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
           const SizedBox(height: 24),
           const Text('ظاهر', style: TextStyle(fontWeight: FontWeight.w900)),
