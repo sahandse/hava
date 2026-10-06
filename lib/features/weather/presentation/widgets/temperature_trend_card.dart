@@ -17,56 +17,117 @@ class TemperatureTrendCard extends StatelessWidget {
     final values = hours.take(24).toList();
     if (values.length < 2) return const SizedBox.shrink();
 
+    final maxRain = values
+        .map((e) => e.precipitationProbability)
+        .reduce(math.max);
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Text(
-                  'روند ۲۴ ساعت',
+                  '۲۴ ساعت آینده',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w900,
                       ),
                 ),
                 const Spacer(),
-                const Icon(Icons.show_chart_rounded, size: 20),
+                Icon(
+                  Icons.auto_graph_rounded,
+                  size: 20,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             SizedBox(
-              height: 150,
+              height: 82,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: values.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 6),
+                itemBuilder: (context, index) {
+                  final hour = values[index];
+                  final selected = index == 0;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    width: 62,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? Theme.of(context).colorScheme.primaryContainer
+                          : Theme.of(context).colorScheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          index == 0
+                              ? 'اکنون'
+                              : '${toPersianDigits(hour.time.hour.toString().padLeft(2, '0'))}:۰۰',
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                        Text(
+                          '${toPersianDigits(hour.temperature.round())}°',
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.water_drop_outlined, size: 11),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${toPersianDigits(hour.precipitationProbability)}٪',
+                              style: Theme.of(context).textTheme.labelSmall,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              height: 128,
               width: double.infinity,
               child: CustomPaint(
                 painter: _TrendPainter(
                   hours: values,
                   lineColor: Theme.of(context).colorScheme.primary,
-                  rainColor: Theme.of(context).colorScheme.secondary,
+                  rainColor: const Color(0xFF47B8FF),
                   gridColor: Theme.of(context)
                       .colorScheme
                       .outlineVariant
-                      .withValues(alpha: .45),
+                      .withValues(alpha: .32),
                 ),
               ),
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                _LegendDot(
+                _CompactLegend(
                   icon: Icons.thermostat_rounded,
-                  label: 'دما',
-                  value:
+                  text:
                       '${toPersianDigits(values.first.temperature.round())}° → '
                       '${toPersianDigits(values.last.temperature.round())}°',
                 ),
                 const Spacer(),
-                _LegendDot(
+                _CompactLegend(
                   icon: Icons.water_drop_outlined,
-                  label: 'بیشترین بارش',
-                  value:
-                      '${toPersianDigits(values.map((e) => e.precipitationProbability).reduce(math.max))}٪',
+                  text: 'تا ${toPersianDigits(maxRain)}٪ بارش',
                 ),
               ],
             ),
@@ -77,31 +138,31 @@ class TemperatureTrendCard extends StatelessWidget {
   }
 }
 
-class _LegendDot extends StatelessWidget {
-  const _LegendDot({
+class _CompactLegend extends StatelessWidget {
+  const _CompactLegend({
     required this.icon,
-    required this.label,
-    required this.value,
+    required this.text,
   });
 
   final IconData icon;
-  final String label;
-  final String value;
+  final String text;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 17),
-        const SizedBox(width: 5),
-        Text(
-          '$label  $value',
-          style: Theme.of(context).textTheme.bodySmall,
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(14),
         ),
-      ],
-    );
-  }
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15),
+            const SizedBox(width: 4),
+            Text(text, style: Theme.of(context).textTheme.labelSmall),
+          ],
+        ),
+      );
 }
 
 class _TrendPainter extends CustomPainter {
@@ -134,12 +195,12 @@ class _TrendPainter extends CustomPainter {
     }
 
     final rainPaint = Paint()
-      ..color = rainColor.withValues(alpha: .18)
+      ..color = rainColor.withValues(alpha: .16)
       ..style = PaintingStyle.fill;
     for (var i = 0; i < hours.length; i++) {
       final probability = hours[i].precipitationProbability / 100;
-      final height = probability * size.height * .55;
-      final barWidth = math.max(2.0, dx * .45);
+      final height = probability * size.height * .5;
+      final barWidth = math.max(2.0, dx * .5);
       final x = i * dx - barWidth / 2;
       canvas.drawRRect(
         RRect.fromRectAndRadius(
@@ -158,7 +219,7 @@ class _TrendPainter extends CustomPainter {
     final path = Path();
     for (var i = 0; i < hours.length; i++) {
       final normalized = (hours[i].temperature - minTemp) / range;
-      final y = size.height - 18 - normalized * (size.height - 36);
+      final y = size.height - 16 - normalized * (size.height - 32);
       final point = Offset(i * dx, y);
       if (i == 0) {
         path.moveTo(point.dx, point.dy);
@@ -167,9 +228,18 @@ class _TrendPainter extends CustomPainter {
       }
     }
 
+    final glow = Paint()
+      ..color = lineColor.withValues(alpha: .2)
+      ..strokeWidth = 8
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    canvas.drawPath(path, glow);
+
     final linePaint = Paint()
       ..color = lineColor
-      ..strokeWidth = 3
+      ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
       ..style = PaintingStyle.stroke;
