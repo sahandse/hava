@@ -1,23 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hava/core/theme/app_theme.dart';
-import 'package:hava/features/weather/presentation/weather_home_screen.dart';
+import 'package:hava/features/settings/application/settings_controller.dart';
+import 'package:hava/features/shell/presentation/main_shell.dart';
 
-class HavaApp extends StatelessWidget {
+class HavaApp extends ConsumerWidget {
   const HavaApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(themeModeProvider).value ?? ThemeMode.system;
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'هوا',
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.system,
+      themeMode: mode,
       locale: const Locale('fa'),
       supportedLocales: const [Locale('fa')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      home: const WeatherHomeScreen(),
+      home: const MainShell(),
     );
   }
 }

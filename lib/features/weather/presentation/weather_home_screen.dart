@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hava/core/date/persian_date.dart';
 import 'package:hava/core/format/persian_digits.dart';
+import 'package:hava/features/air_quality/application/air_quality_controller.dart';
+import 'package:hava/features/location/application/city_controller.dart';
+import 'package:hava/features/location/presentation/city_search_screen.dart';
 import 'package:hava/features/weather/application/weather_controller.dart';
 
 class WeatherHomeScreen extends ConsumerWidget {
@@ -9,41 +13,84 @@ class WeatherHomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final weather = ref.watch(weatherProvider);
+    final aqi = ref.watch(airQualityProvider);
+    final city = ref.watch(selectedCityProvider);
 
     return Scaffold(
       body: SafeArea(
         child: weather.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const _LoadingState(),
           error: (error, _) => _ErrorState(
             message: error.toString().replaceFirst('Bad state: ', ''),
             onRetry: () => ref.invalidate(weatherProvider),
           ),
           data: (data) {
             final current = data.current;
+            final nowVisibility = data.hourly.isNotEmpty
+                ? data.hourly.first.visibility / 1000
+                : 0.0;
             return RefreshIndicator(
-              onRefresh: () => ref.refresh(weatherProvider.future),
+              onRefresh: () async {
+                ref.invalidate(weatherProvider);
+                ref.invalidate(airQualityProvider);
+                await ref.read(weatherProvider.future);
+              },
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 32),
                 children: [
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          'هوا',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w900,
-                              ),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18),
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) => const CitySearchScreen(),
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 8,
+                              horizontal: 2,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  city?.name ?? 'موقعیت فعلی',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleLarge
+                                      ?.copyWith(fontWeight: FontWeight.w900),
+                                ),
+                                Text(
+                                  persianDateLabel(DateTime.now()),
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                       IconButton.filledTonal(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (_) => const CitySearchScreen(),
+                          ),
+                        ),
+                        icon: const Icon(Icons.location_on_outlined),
+                      ),
+                      const SizedBox(width: 6),
+                      IconButton.filledTonal(
                         onPressed: () => ref.invalidate(weatherProvider),
-                        tooltip: 'بروزرسانی',
                         icon: const Icon(Icons.refresh_rounded),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -60,11 +107,8 @@ class WeatherHomeScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          _weatherIcon(current.weatherCode),
-                          size: 58,
-                        ),
-                        const SizedBox(height: 18),
+                        Icon(_weatherIcon(current.weatherCode), size: 64),
+                        const SizedBox(height: 16),
                         Text(
                           toPersianDigits(current.temperature.round()) + '°',
                           style: Theme.of(context).textTheme.displayLarge?.copyWith(
@@ -73,44 +117,47 @@ class WeatherHomeScreen extends ConsumerWidget {
                               ),
                         ),
                         Text(
-                          'دمای احساسی ' +
-                              toPersianDigits(current.apparentTemperature.round()) +
+                          _weatherLabel(current.weatherCode) +
+                              ' • احساسی ' +
+                              toPersianDigits(
+                                current.apparentTemperature.round(),
+                              ) +
                               '°',
                         ),
-                        const SizedBox(height: 20),
-                        Row(
+                        const SizedBox(height: 22),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
                           children: [
-                            Expanded(
-                              child: _Metric(
-                                icon: Icons.water_drop_outlined,
-                                label: 'رطوبت',
-                                value: toPersianDigits(current.humidity) + '٪',
-                              ),
+                            _MetricChip(
+                              icon: Icons.water_drop_outlined,
+                              label: 'رطوبت',
+                              value: toPersianDigits(current.humidity) + '٪',
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _Metric(
-                                icon: Icons.air_rounded,
-                                label: 'باد',
-                                value: toPersianDigits(current.windSpeed.round()) +
-                                    ' km/h',
-                              ),
+                            _MetricChip(
+                              icon: Icons.air_rounded,
+                              label: 'باد',
+                              value: toPersianDigits(
+                                    current.windSpeed.round(),
+                                  ) +
+                                  ' km/h',
+                            ),
+                            _MetricChip(
+                              icon: Icons.grain_rounded,
+                              label: 'بارش',
+                              value: toPersianDigits(current.precipitation) +
+                                  ' mm',
                             ),
                           ],
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'پیش‌بینی ساعتی',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
-                  ),
+                  const SizedBox(height: 22),
+                  _SectionTitle(title: 'پیش‌بینی ساعتی'),
                   const SizedBox(height: 10),
                   SizedBox(
-                    height: 124,
+                    height: 126,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: data.hourly.length > 24 ? 24 : data.hourly.length,
@@ -155,13 +202,79 @@ class WeatherHomeScreen extends ConsumerWidget {
                       },
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  Text(
-                    '۱۰ روز آینده',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w900,
+                  const SizedBox(height: 22),
+                  _SectionTitle(title: 'وضعیت هوا'),
+                  const SizedBox(height: 10),
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 1.55,
+                    children: [
+                      aqi.when(
+                        loading: () => const _InfoCard(
+                          icon: Icons.air_rounded,
+                          title: 'کیفیت هوا',
+                          value: '...',
+                          subtitle: 'در حال دریافت',
                         ),
+                        error: (_, __) => const _InfoCard(
+                          icon: Icons.air_rounded,
+                          title: 'کیفیت هوا',
+                          value: '—',
+                          subtitle: 'در دسترس نیست',
+                        ),
+                        data: (value) => _InfoCard(
+                          icon: Icons.air_rounded,
+                          title: 'کیفیت هوا',
+                          value: toPersianDigits(value.usAqi),
+                          subtitle: value.label,
+                        ),
+                      ),
+                      aqi.when(
+                        loading: () => const _InfoCard(
+                          icon: Icons.wb_sunny_outlined,
+                          title: 'UV',
+                          value: '...',
+                          subtitle: 'شاخص فرابنفش',
+                        ),
+                        error: (_, __) => const _InfoCard(
+                          icon: Icons.wb_sunny_outlined,
+                          title: 'UV',
+                          value: '—',
+                          subtitle: 'در دسترس نیست',
+                        ),
+                        data: (value) => _InfoCard(
+                          icon: Icons.wb_sunny_outlined,
+                          title: 'UV',
+                          value: toPersianDigits(value.uvIndex.toStringAsFixed(1)),
+                          subtitle: _uvLabel(value.uvIndex),
+                        ),
+                      ),
+                      _InfoCard(
+                        icon: Icons.speed_rounded,
+                        title: 'فشار',
+                        value: toPersianDigits(
+                              current.surfacePressure.round(),
+                            ) +
+                            ' hPa',
+                        subtitle: 'فشار سطح',
+                      ),
+                      _InfoCard(
+                        icon: Icons.visibility_outlined,
+                        title: 'دید',
+                        value: toPersianDigits(
+                              nowVisibility.toStringAsFixed(1),
+                            ) +
+                            ' km',
+                        subtitle: 'دید افقی',
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 22),
+                  _SectionTitle(title: '۱۰ روز آینده'),
                   const SizedBox(height: 10),
                   Card(
                     child: Padding(
@@ -176,9 +289,9 @@ class WeatherHomeScreen extends ConsumerWidget {
                             child: Row(
                               children: [
                                 SizedBox(
-                                  width: 82,
+                                  width: 105,
                                   child: Text(
-                                    _weekday(day.date.weekday),
+                                    persianDateLabel(day.date).split('،').first,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -216,6 +329,26 @@ class WeatherHomeScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.wb_twilight_rounded),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'طلوع ' +
+                                  _time(data.daily.first.sunrise) +
+                                  '  •  غروب ' +
+                                  _time(data.daily.first.sunset),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             );
@@ -226,85 +359,162 @@ class WeatherHomeScreen extends ConsumerWidget {
   }
 }
 
-class _Metric extends StatelessWidget {
-  const _Metric({
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title});
+  final String title;
+
+  @override
+  Widget build(BuildContext context) => Text(
+        title,
+        style: Theme.of(context)
+            .textTheme
+            .titleMedium
+            ?.copyWith(fontWeight: FontWeight.w900),
+      );
+}
+
+class _MetricChip extends StatelessWidget {
+  const _MetricChip({
     required this.icon,
     required this.label,
     required this.value,
   });
-
   final IconData icon;
   final String label;
   final String value;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: .55),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 20),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: const TextStyle(fontWeight: FontWeight.w900),
-                ),
-                Text(label, style: Theme.of(context).textTheme.bodySmall),
-              ],
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: .55),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18),
+            const SizedBox(width: 7),
+            Text('$label  $value'),
+          ],
+        ),
+      );
+}
+
+class _InfoCard extends StatelessWidget {
+  const _InfoCard({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.subtitle,
+  });
+  final IconData icon;
+  final String title;
+  final String value;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, size: 19),
+                  const SizedBox(width: 6),
+                  Text(title, style: Theme.of(context).textTheme.bodySmall),
+                ],
+              ),
+              const Spacer(),
+              Text(
+                value,
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ),
+        ),
+      );
+}
+
+class _LoadingState extends StatelessWidget {
+  const _LoadingState();
+  @override
+  Widget build(BuildContext context) => ListView(
+        padding: const EdgeInsets.all(16),
+        children: List.generate(
+          6,
+          (index) => Container(
+            height: index == 0 ? 280 : 110,
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(28),
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      );
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({
-    required this.message,
-    required this.onRetry,
-  });
-
+  const _ErrorState({required this.message, required this.onRetry});
   final String message;
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.cloud_off_rounded, size: 72),
-            const SizedBox(height: 18),
-            Text(
-              'هوا فعلاً در دسترس نیست',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 18),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('دوباره تلاش کن'),
-            ),
-          ],
+  Widget build(BuildContext context) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.cloud_off_rounded, size: 72),
+              const SizedBox(height: 16),
+              const Text(
+                'هوا فعلاً در دسترس نیست',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20),
+              ),
+              const SizedBox(height: 8),
+              Text(message, textAlign: TextAlign.center),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('دوباره تلاش کن'),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
-  }
+      );
+}
+
+String _time(DateTime time) =>
+    toPersianDigits(time.hour.toString().padLeft(2, '0')) +
+    ':' +
+    toPersianDigits(time.minute.toString().padLeft(2, '0'));
+
+String _uvLabel(double value) {
+  if (value < 3) return 'کم';
+  if (value < 6) return 'متوسط';
+  if (value < 8) return 'زیاد';
+  if (value < 11) return 'خیلی زیاد';
+  return 'بسیار شدید';
+}
+
+String _weatherLabel(int code) {
+  if (code == 0) return 'صاف';
+  if (code <= 3) return 'نیمه‌ابری';
+  if (code <= 48) return 'مه‌آلود';
+  if (code <= 67) return 'بارانی';
+  if (code <= 77) return 'برفی';
+  if (code <= 82) return 'رگبار';
+  if (code <= 86) return 'برف';
+  return 'رعدوبرق';
 }
 
 IconData _weatherIcon(int code) {
@@ -316,17 +526,4 @@ IconData _weatherIcon(int code) {
   if (code <= 82) return Icons.grain_rounded;
   if (code <= 86) return Icons.ac_unit_rounded;
   return Icons.thunderstorm_rounded;
-}
-
-String _weekday(int weekday) {
-  const days = [
-    'دوشنبه',
-    'سه‌شنبه',
-    'چهارشنبه',
-    'پنجشنبه',
-    'جمعه',
-    'شنبه',
-    'یکشنبه',
-  ];
-  return days[weekday - 1];
 }

@@ -24,11 +24,15 @@ class OpenMeteoWeatherRepository {
           'relative_humidity_2m',
           'weather_code',
           'wind_speed_10m',
+          'wind_direction_10m',
+          'precipitation',
+          'surface_pressure',
         ].join(','),
         'hourly': [
           'temperature_2m',
           'precipitation_probability',
           'weather_code',
+          'visibility',
         ].join(','),
         'daily': [
           'weather_code',
@@ -42,9 +46,7 @@ class OpenMeteoWeatherRepository {
     );
 
     final data = response.data;
-    if (data == null) {
-      throw StateError('Weather response is empty.');
-    }
+    if (data == null) throw StateError('پاسخ هواشناسی خالی است.');
 
     final current = data['current'] as Map<String, dynamic>;
     final hourly = data['hourly'] as Map<String, dynamic>;
@@ -52,12 +54,17 @@ class OpenMeteoWeatherRepository {
 
     return WeatherBundle(
       timezone: data['timezone'] as String? ?? 'auto',
+      latitude: (data['latitude'] as num).toDouble(),
+      longitude: (data['longitude'] as num).toDouble(),
       current: CurrentWeather(
         temperature: (current['temperature_2m'] as num).toDouble(),
         apparentTemperature: (current['apparent_temperature'] as num).toDouble(),
         weatherCode: (current['weather_code'] as num).toInt(),
         humidity: (current['relative_humidity_2m'] as num).toInt(),
         windSpeed: (current['wind_speed_10m'] as num).toDouble(),
+        windDirection: (current['wind_direction_10m'] as num).toInt(),
+        precipitation: (current['precipitation'] as num).toDouble(),
+        surfacePressure: (current['surface_pressure'] as num).toDouble(),
         updatedAt: DateTime.parse(current['time'] as String),
       ),
       hourly: _parseHourly(hourly),
@@ -70,6 +77,7 @@ class OpenMeteoWeatherRepository {
     final temperatures = (json['temperature_2m'] as List).cast<num>();
     final rain = (json['precipitation_probability'] as List).cast<num>();
     final codes = (json['weather_code'] as List).cast<num>();
+    final visibility = (json['visibility'] as List).cast<num>();
 
     return List.generate(times.length, (index) {
       return HourlyWeather(
@@ -77,6 +85,7 @@ class OpenMeteoWeatherRepository {
         temperature: temperatures[index].toDouble(),
         precipitationProbability: rain[index].toInt(),
         weatherCode: codes[index].toInt(),
+        visibility: visibility[index].toDouble(),
       );
     });
   }

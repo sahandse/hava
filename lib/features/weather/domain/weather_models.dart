@@ -5,6 +5,9 @@ class CurrentWeather {
     required this.weatherCode,
     required this.humidity,
     required this.windSpeed,
+    required this.windDirection,
+    required this.precipitation,
+    required this.surfacePressure,
     required this.updatedAt,
   });
 
@@ -13,6 +16,9 @@ class CurrentWeather {
   final int weatherCode;
   final int humidity;
   final double windSpeed;
+  final int windDirection;
+  final double precipitation;
+  final double surfacePressure;
   final DateTime updatedAt;
 }
 
@@ -22,12 +28,14 @@ class HourlyWeather {
     required this.temperature,
     required this.precipitationProbability,
     required this.weatherCode,
+    required this.visibility,
   });
 
   final DateTime time;
   final double temperature;
   final int precipitationProbability;
   final int weatherCode;
+  final double visibility;
 }
 
 class DailyWeather {
@@ -56,10 +64,14 @@ class WeatherBundle {
     required this.hourly,
     required this.daily,
     required this.timezone,
+    required this.latitude,
+    required this.longitude,
   });
 
   final CurrentWeather current;
   final List<HourlyWeather> hourly;
   final List<DailyWeather> daily;
   final String timezone;
+  final double latitude;
+  final double longitude;
 }
