@@ -12,6 +12,8 @@ import 'package:hava/features/weather/domain/weather_models.dart';
 import 'package:hava/features/weather/domain/moon_phase.dart';
 import 'package:hava/features/weather/presentation/daily_detail_screen.dart';
 import 'package:hava/features/weather/presentation/widgets/temperature_trend_card.dart';
+import 'package:hava/features/weather/presentation/widgets/weather_palette.dart';
+import 'package:hava/features/weather/presentation/widgets/weather_scene.dart';
 
 class WeatherHomeScreen extends ConsumerWidget {
   const WeatherHomeScreen({super.key});
@@ -41,13 +43,14 @@ class WeatherHomeScreen extends ConsumerWidget {
               today: today,
               hourly: data.hourly,
             );
-            final heroColors = _heroColors(
-              context,
-              current.weatherCode,
-              current.updatedAt,
-              today.sunrise,
-              today.sunset,
+            final palette = WeatherPalette.resolve(
+              weatherCode: current.weatherCode,
+              now: current.updatedAt,
+              sunrise: today.sunrise,
+              sunset: today.sunset,
+              brightness: Theme.of(context).brightness,
             );
+            final heroColors = palette.colors;
             return RefreshIndicator(
               onRefresh: () async {
                 ref.invalidate(weatherProvider);
@@ -82,7 +85,10 @@ class WeatherHomeScreen extends ConsumerWidget {
                                   style: Theme.of(context)
                                       .textTheme
                                       .titleLarge
-                                      ?.copyWith(fontWeight: FontWeight.w900),
+                                      ?.copyWith(
+                                    fontWeight: FontWeight.w900,
+                                    color: palette.foreground,
+                                  ),
                                 ),
                                 Text(
                                   persianDateLabel(DateTime.now()),
@@ -129,28 +135,11 @@ class WeatherHomeScreen extends ConsumerWidget {
                     ),
                     child: Stack(
                       children: [
-                        Positioned(
-                          left: -26,
-                          top: -28,
-                          child: Container(
-                            width: 120,
-                            height: 120,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withValues(alpha: .12),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          right: -40,
-                          bottom: -46,
-                          child: Container(
-                            width: 150,
-                            height: 150,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withValues(alpha: .08),
-                            ),
+                        Positioned.fill(
+                          child: WeatherScene(
+                            weatherCode: current.weatherCode,
+                            isNight: palette.isNight,
+                            accent: palette.accent,
                           ),
                         ),
                         Column(
@@ -167,6 +156,7 @@ class WeatherHomeScreen extends ConsumerWidget {
                               child: Icon(
                                 _weatherIcon(current.weatherCode),
                                 size: 40,
+                                color: palette.foreground,
                               ),
                             ),
                             const Spacer(),
@@ -185,6 +175,7 @@ class WeatherHomeScreen extends ConsumerWidget {
                           style: Theme.of(context).textTheme.displayLarge?.copyWith(
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: -3,
+                                color: palette.foreground,
                               ),
                         ),
                         Text(
