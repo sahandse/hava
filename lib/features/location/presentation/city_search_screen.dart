@@ -72,9 +72,9 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
               'شهرهای محبوب',
               style: TextStyle(fontWeight: FontWeight.w900),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             SizedBox(
-              height: 150,
+              height: 164,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: popularCities.length,
@@ -95,8 +95,15 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
                       width: 150,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(24),
+                        gradient: LinearGradient(
+                          begin: Alignment.topRight,
+                          end: Alignment.bottomLeft,
+                          colors: [
+                            Theme.of(context).colorScheme.primaryContainer,
+                            Theme.of(context).colorScheme.tertiaryContainer,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(26),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,7 +148,7 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
                                   ?.copyWith(fontWeight: FontWeight.w900),
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 6),
                           Text(
                             city.admin1 ?? city.country,
                             maxLines: 1,
