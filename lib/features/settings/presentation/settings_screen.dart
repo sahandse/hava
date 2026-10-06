@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hava/core/services/notification_service.dart';
 import 'package:hava/features/settings/application/settings_controller.dart';
+import 'package:hava/features/settings/presentation/alert_settings_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -93,6 +94,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               'اگر احتمال بارش چند ساعت آینده بالا باشد اطلاع بده',
             ),
             secondary: const Icon(Icons.notifications_active_outlined),
+          ),
+          ListTile(
+            leading: const Icon(Icons.tune_rounded),
+            title: const Text('تنظیم جزئی هشدارها'),
+            subtitle: const Text('آستانه بارش، باد، UV و کیفیت هوا'),
+            trailing: const Icon(Icons.chevron_left_rounded),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => const AlertSettingsScreen(),
+              ),
+            ),
           ),
           SwitchListTile(
             value: lowData,
