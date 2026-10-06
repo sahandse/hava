@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hava/features/location/application/city_controller.dart';
-import 'package:hava/features/location/data/city_repository.dart';
 import 'package:hava/features/location/data/iran_location_repository.dart';
 
 class IranLocationOnboardingScreen extends ConsumerStatefulWidget {
