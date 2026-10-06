@@ -474,7 +474,7 @@ class _MapModeBar extends StatelessWidget {
   final ValueChanged<_ProbeMetric> onChanged;
 
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) => _MapPanel(
         child: SizedBox(
           height: 50,
           child: ListView(
@@ -554,7 +554,7 @@ class _ProbeCard extends StatelessWidget {
       value = result.$2;
     }
 
-    return Card(
+    return _MapPanel(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Row(
@@ -594,7 +594,7 @@ class _RadarStatusCard extends StatelessWidget {
     final hour = toPersianDigits(frame.time.hour.toString().padLeft(2, '0'));
     final minute = toPersianDigits(frame.time.minute.toString().padLeft(2, '0'));
 
-    return Card(
+    return _MapPanel(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         child: Row(
@@ -642,7 +642,7 @@ class _RadarTimeline extends StatelessWidget {
   final ValueChanged<double> onChanged;
 
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) => _MapPanel(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
           child: Column(
@@ -695,7 +695,7 @@ class _RadarLegend extends StatelessWidget {
   const _RadarLegend();
 
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) => _MapPanel(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           child: Row(
@@ -800,4 +800,33 @@ class _WeatherProbe {
   final double windSpeed;
   final double cloudCover;
   final double pressure;
+}
+
+
+class _MapPanel extends StatelessWidget {
+  const _MapPanel({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: dark
+          ? const Color(0xCC111A2B)
+          : Colors.white.withValues(alpha: .86),
+      elevation: 0,
+      borderRadius: BorderRadius.circular(22),
+      clipBehavior: Clip.antiAlias,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: dark ? .08 : .6),
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
 }
