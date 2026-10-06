@@ -7,8 +7,8 @@
     <application
         android:label="هوا"
         android:name="${applicationName}"
-        android:icon="@drawable/app_icon_image"
-        android:roundIcon="@drawable/app_icon_image"
+        android:icon="@drawable/app_icon"
+        android:roundIcon="@drawable/app_icon"
         android:usesCleartextTraffic="false">
         <activity
             android:name=".MainActivity"
