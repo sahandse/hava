@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:hava/core/widgets/soft_reveal.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hava/features/location/application/city_controller.dart';
 import 'package:hava/features/location/application/popular_city_weather_controller.dart';
@@ -25,6 +27,7 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
   }
 
   void _select(City city) {
+    HapticFeedback.selectionClick();
     ref.read(selectedCityProvider.notifier).select(city);
     Navigator.pop(context);
   }
@@ -88,7 +91,8 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
                         item.longitude == city.longitude,
                   );
 
-                  return InkWell(
+                  return SoftReveal(
+                    child: InkWell(
                     borderRadius: BorderRadius.circular(24),
                     onTap: () => _select(city),
                     child: Container(
@@ -126,9 +130,12 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
                                       : Icons.star_border_rounded,
                                   size: 19,
                                 ),
-                                onPressed: () => ref
-                                    .read(favoriteCitiesProvider.notifier)
-                                    .toggle(city),
+                                onPressed: () {
+                                  HapticFeedback.selectionClick();
+                                  ref
+                                      .read(favoriteCitiesProvider.notifier)
+                                      .toggle(city);
+                                },
                               ),
                             ],
                           ),
@@ -157,6 +164,7 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
                           ),
                         ],
                       ),
+                    ),
                     ),
                   );
                 },
