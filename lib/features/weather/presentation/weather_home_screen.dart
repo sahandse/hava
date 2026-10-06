@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hava/core/date/persian_date.dart';
 import 'package:hava/core/format/persian_digits.dart';
+import 'package:hava/core/widgets/soft_reveal.dart';
 import 'package:hava/features/air_quality/application/air_quality_controller.dart';
 import 'package:hava/features/air_quality/presentation/air_quality_detail_screen.dart';
 import 'package:hava/features/location/application/city_controller.dart';
@@ -247,7 +248,7 @@ class WeatherHomeScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 22),
-                  TemperatureTrendCard(hours: data.hourly),
+                  SoftReveal(child: TemperatureTrendCard(hours: data.hourly)),
                   const SizedBox(height: 22),
                   _SectionTitle(title: 'وضعیت هوا'),
                   const SizedBox(height: 10),
@@ -405,7 +406,7 @@ class WeatherHomeScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _SunMoonCard(day: data.daily.first),
+                  SoftReveal(child: _SunMoonCard(day: data.daily.first)),
                 ],
               ),
             );
