@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:hava/features/weather/domain/weather_models.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class OpenMeteoWeatherRepository {
   OpenMeteoWeatherRepository([Dio? dio])
@@ -11,43 +14,84 @@ class OpenMeteoWeatherRepository {
     required double latitude,
     required double longitude,
   }) async {
-    final response = await _dio.get<Map<String, dynamic>>(
-      '/forecast',
-      queryParameters: {
-        'latitude': latitude,
-        'longitude': longitude,
-        'timezone': 'auto',
-        'forecast_days': 10,
-        'current': [
-          'temperature_2m',
-          'apparent_temperature',
-          'relative_humidity_2m',
-          'weather_code',
-          'wind_speed_10m',
-          'wind_direction_10m',
-          'precipitation',
-          'surface_pressure',
-        ].join(','),
-        'hourly': [
-          'temperature_2m',
-          'precipitation_probability',
-          'weather_code',
-          'visibility',
-        ].join(','),
-        'daily': [
-          'weather_code',
-          'temperature_2m_max',
-          'temperature_2m_min',
-          'precipitation_probability_max',
-          'sunrise',
-          'sunset',
-        ].join(','),
-      },
-    );
+    final cacheKey = _cacheKey(latitude, longitude);
 
-    final data = response.data;
-    if (data == null) throw StateError('پاسخ هواشناسی خالی است.');
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/forecast',
+        queryParameters: {
+          'latitude': latitude,
+          'longitude': longitude,
+          'timezone': 'auto',
+          'forecast_days': 10,
+          'current': [
+            'temperature_2m',
+            'apparent_temperature',
+            'relative_humidity_2m',
+            'weather_code',
+            'wind_speed_10m',
+            'wind_direction_10m',
+            'precipitation',
+            'surface_pressure',
+          ].join(','),
+          'hourly': [
+            'temperature_2m',
+            'precipitation_probability',
+            'weather_code',
+            'visibility',
+          ].join(','),
+          'daily': [
+            'weather_code',
+            'temperature_2m_max',
+            'temperature_2m_min',
+            'precipitation_probability_max',
+            'sunrise',
+            'sunset',
+          ].join(','),
+        },
+      );
 
+      final data = response.data;
+      if (data == null) {
+        throw StateError('پاسخ هواشناسی خالی است.');
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(cacheKey, jsonEncode(data));
+      await prefs.setString(
+        '${cacheKey}_saved_at',
+        DateTime.now().toIso8601String(),
+      );
+
+      return _parse(data);
+    } on DioException {
+      final cached = await _readCache(cacheKey);
+      if (cached != null) return _parse(cached);
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>?> _readCache(String cacheKey) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(cacheKey);
+    if (raw == null || raw.isEmpty) return null;
+
+    try {
+      return jsonDecode(raw) as Map<String, dynamic>;
+    } on FormatException {
+      await prefs.remove(cacheKey);
+      await prefs.remove('${cacheKey}_saved_at');
+      return null;
+    }
+  }
+
+  String _cacheKey(double latitude, double longitude) {
+    final lat = latitude.toStringAsFixed(3);
+    final lon = longitude.toStringAsFixed(3);
+    return 'weather_cache_${lat}_${lon}';
+  }
+
+  WeatherBundle _parse(Map<String, dynamic> data) {
     final current = data['current'] as Map<String, dynamic>;
     final hourly = data['hourly'] as Map<String, dynamic>;
     final daily = data['daily'] as Map<String, dynamic>;
