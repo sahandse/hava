@@ -8,7 +8,14 @@ import 'package:hava/core/format/persian_digits.dart';
 import 'package:hava/features/location/domain/city.dart';
 
 class CitySearchScreen extends ConsumerStatefulWidget {
-  const CitySearchScreen({super.key});
+  const CitySearchScreen({
+    this.selectionRequired = false,
+    this.onSelectionCompleted,
+    super.key,
+  });
+
+  final bool selectionRequired;
+  final VoidCallback? onSelectionCompleted;
 
   @override
   ConsumerState<CitySearchScreen> createState() => _CitySearchScreenState();
@@ -26,10 +33,27 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
     });
   }
 
-  void _select(City city) {
+  Future<void> _select(City city) async {
     HapticFeedback.selectionClick();
-    ref.read(selectedCityProvider.notifier).select(city);
-    Navigator.pop(context);
+    await ref.read(currentLocationProvider.notifier).disable();
+    await ref.read(selectedCityProvider.notifier).select(city);
+    if (!mounted) return;
+    if (widget.selectionRequired) {
+      widget.onSelectionCompleted?.call();
+    } else {
+      Navigator.pop(context);
+    }
+  }
+
+  Future<void> _useCurrentLocation() async {
+    HapticFeedback.mediumImpact();
+    await ref.read(currentLocationProvider.notifier).enable();
+    if (!mounted) return;
+    if (widget.selectionRequired) {
+      widget.onSelectionCompleted?.call();
+    } else {
+      Navigator.pop(context);
+    }
   }
 
   @override
@@ -37,16 +61,70 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
     final favorites = ref.watch(favoriteCitiesProvider).value ?? const <City>[];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('شهرها')),
+      appBar: widget.selectionRequired
+          ? null
+          : AppBar(title: const Text('شهرها')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          widget.selectionRequired ? 42 : 16,
+          16,
+          110,
+        ),
         children: [
+          if (widget.selectionRequired) ...[
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: .82, end: 1),
+              duration: const Duration(milliseconds: 720),
+              curve: Curves.easeOutBack,
+              builder: (context, value, child) => Transform.scale(
+                scale: value,
+                child: Opacity(
+                  opacity: value.clamp(0.0, 1.0),
+                  child: child,
+                ),
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(22),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(32),
+                  gradient: LinearGradient(
+                    begin: Alignment.topRight,
+                    end: Alignment.bottomLeft,
+                    colors: [
+                      Theme.of(context).colorScheme.primaryContainer,
+                      Theme.of(context).colorScheme.tertiaryContainer,
+                    ],
+                  ),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.cloud_rounded, size: 48),
+                    SizedBox(height: 18),
+                    Text(
+                      'هوا برای کجاست؟',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'شهر یا شهرستانت را انتخاب کن. موقعیت مکانی فقط اگر خودت بخواهی استفاده می‌شود.',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
           TextField(
             controller: _controller,
             onChanged: _run,
             textInputAction: TextInputAction.search,
             decoration: const InputDecoration(
-              hintText: 'جستجوی شهر...',
+              hintText: 'جستجوی شهر یا شهرستان...',
               prefixIcon: Icon(Icons.search_rounded),
             ),
           ),
@@ -70,6 +148,17 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
             ),
           ],
           if (_search == null) ...[
+            const SizedBox(height: 16),
+            SoftReveal(
+              child: FilledButton.tonalIcon(
+                onPressed: _useCurrentLocation,
+                icon: const Icon(Icons.my_location_rounded),
+                label: const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 14),
+                  child: Text('استفاده از موقعیت فعلی (اختیاری)'),
+                ),
+              ),
+            ),
             const SizedBox(height: 24),
             const Text(
               'شهرهای محبوب',
