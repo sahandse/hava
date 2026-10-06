@@ -81,7 +81,7 @@ class CurrentLocationController extends Notifier<bool> {
 
   Future<void> enable() async {
     state = true;
-    ref.read(selectedCityProvider.notifier).state = null;
+    await ref.read(selectedCityProvider.notifier).select(null);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(currentLocationKey, true);
     await prefs.remove(SelectedCityController.selectedCityKey);
