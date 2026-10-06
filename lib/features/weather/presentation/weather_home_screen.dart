@@ -6,6 +6,7 @@ import 'package:hava/features/air_quality/application/air_quality_controller.dar
 import 'package:hava/features/location/application/city_controller.dart';
 import 'package:hava/features/location/presentation/city_search_screen.dart';
 import 'package:hava/features/weather/application/weather_controller.dart';
+import 'package:hava/features/weather/presentation/widgets/temperature_trend_card.dart';
 
 class WeatherHomeScreen extends ConsumerWidget {
   const WeatherHomeScreen({super.key});
@@ -202,6 +203,8 @@ class WeatherHomeScreen extends ConsumerWidget {
                       },
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  TemperatureTrendCard(hours: data.hourly),
                   const SizedBox(height: 22),
                   _SectionTitle(title: 'وضعیت هوا'),
                   const SizedBox(height: 10),
