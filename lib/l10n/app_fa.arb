@@ -1,0 +1,13 @@
+{
+  "@@locale": "fa",
+  "appName": "هوا",
+  "updatedNow": "همین حالا بروزرسانی شد",
+  "refresh": "بروزرسانی",
+  "hourlyForecast": "پیش‌بینی ساعتی",
+  "dailyForecast": "۱۰ روز آینده",
+  "airQuality": "کیفیت هوا",
+  "wind": "باد",
+  "humidity": "رطوبت",
+  "uvIndex": "شاخص UV",
+  "sunriseSunset": "طلوع و غروب"
+}
