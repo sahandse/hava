@@ -1,13 +1,18 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_cache/flutter_map_cache.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hava/core/format/persian_digits.dart';
 import 'package:hava/features/weather/application/weather_controller.dart';
+import 'package:http_cache_file_store/http_cache_file_store.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class RadarScreen extends ConsumerStatefulWidget {
@@ -20,6 +25,14 @@ class RadarScreen extends ConsumerStatefulWidget {
 class _RadarScreenState extends ConsumerState<RadarScreen> {
   final _mapController = MapController();
   final _dio = Dio();
+  late final Future<CacheStore> _cacheStoreFuture = _getCacheStore();
+
+  static Future<CacheStore> _getCacheStore() async {
+    final dir = await getTemporaryDirectory();
+    return FileCacheStore(
+      '${dir.path}${Platform.pathSeparator}hava_map_tiles',
+    );
+  }
 
   List<_RadarFrame> _frames = const [];
   String? _host;
@@ -231,9 +244,13 @@ class _RadarScreenState extends ConsumerState<RadarScreen> {
           final center = LatLng(weatherData.latitude, weatherData.longitude);
           final frame = _frames[_frameIndex];
 
-          return Stack(
-            children: [
-              FlutterMap(
+          return FutureBuilder<CacheStore>(
+            future: _cacheStoreFuture,
+            builder: (context, cacheSnapshot) {
+              final cacheStore = cacheSnapshot.data;
+              return Stack(
+                children: [
+                  FlutterMap(
                 mapController: _mapController,
                 options: MapOptions(
                   initialCenter: center,
@@ -257,6 +274,12 @@ class _RadarScreenState extends ConsumerState<RadarScreen> {
                         'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.sahand.hava',
                     maxNativeZoom: 19,
+                    tileProvider: cacheStore == null
+                        ? null
+                        : CachedTileProvider(
+                            store: cacheStore,
+                            maxStale: const Duration(days: 30),
+                          ),
                   ),
                   if (_metric == _ProbeMetric.radar)
                     TileLayer(
@@ -267,6 +290,12 @@ class _RadarScreenState extends ConsumerState<RadarScreen> {
                       maxNativeZoom: 7,
                       maxZoom: 12,
                       tileDisplay: const TileDisplay.fadeIn(),
+                      tileProvider: cacheStore == null
+                          ? null
+                          : CachedTileProvider(
+                              store: cacheStore,
+                              maxStale: const Duration(hours: 12),
+                            ),
                     ),
                   if (_showCoverage)
                     TileLayer(
@@ -275,6 +304,12 @@ class _RadarScreenState extends ConsumerState<RadarScreen> {
                       userAgentPackageName: 'com.sahand.hava',
                       maxNativeZoom: 7,
                       maxZoom: 12,
+                      tileProvider: cacheStore == null
+                          ? null
+                          : CachedTileProvider(
+                              store: cacheStore,
+                              maxStale: const Duration(days: 7),
+                            ),
                     ),
                   MarkerLayer(
                     markers: [
@@ -417,7 +452,9 @@ class _RadarScreenState extends ConsumerState<RadarScreen> {
                   bottom: 120,
                   child: _RadarLegend(),
                 ),
-            ],
+                ],
+              );
+            },
           );
         },
       ),
@@ -494,24 +531,27 @@ class _ProbeCard extends StatelessWidget {
       title = 'در حال دریافت داده نقطه';
       value = '...';
     } else {
-      switch (metric) {
-        case _ProbeMetric.temperature:
-          title = 'دما';
-          value = '${toPersianDigits(probe!.temperature.toStringAsFixed(1))}°';
-        case _ProbeMetric.wind:
-          title = 'باد';
-          value =
-              '${toPersianDigits(probe!.windSpeed.toStringAsFixed(1))} km/h';
-        case _ProbeMetric.clouds:
-          title = 'پوشش ابر';
-          value = '${toPersianDigits(probe!.cloudCover.round())}٪';
-        case _ProbeMetric.pressure:
-          title = 'فشار';
-          value = '${toPersianDigits(probe!.pressure.round())} hPa';
-        case _ProbeMetric.radar:
-          title = 'رادار';
-          value = '';
-      }
+      final result = switch (metric) {
+        _ProbeMetric.temperature => (
+            'دما',
+            '${toPersianDigits(probe!.temperature.toStringAsFixed(1))}°',
+          ),
+        _ProbeMetric.wind => (
+            'باد',
+            '${toPersianDigits(probe!.windSpeed.toStringAsFixed(1))} km/h',
+          ),
+        _ProbeMetric.clouds => (
+            'پوشش ابر',
+            '${toPersianDigits(probe!.cloudCover.round())}٪',
+          ),
+        _ProbeMetric.pressure => (
+            'فشار',
+            '${toPersianDigits(probe!.pressure.round())} hPa',
+          ),
+        _ProbeMetric.radar => ('رادار', ''),
+      };
+      title = result.$1;
+      value = result.$2;
     }
 
     return Card(
