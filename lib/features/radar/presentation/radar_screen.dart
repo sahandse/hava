@@ -678,7 +678,7 @@ class _RadarTimeline extends StatelessWidget {
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: ChoiceChip(
-                      label: Text('${item}×'),
+                      label: Text('$item×'),
                       selected: speed == item,
                       onSelected: (_) => onSpeedChanged(item),
                     ),
