@@ -494,29 +494,30 @@ class _InfoCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(22),
             ),
             child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(icon, size: 19),
-                  const SizedBox(width: 6),
-                  Text(title, style: Theme.of(context).textTheme.bodySmall),
+                  Row(
+                    children: [
+                      Icon(icon, size: 19),
+                      const SizedBox(width: 6),
+                      Text(title, style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ),
+                  const Spacer(),
+                  Text(
+                    value,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w900),
+                  ),
+                  Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
                 ],
               ),
-              const Spacer(),
-              Text(
-                value,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-            ],
+            ),
           ),
-        ),
         ),
       );
   }
@@ -608,40 +609,6 @@ IconData _weatherIcon(int code) {
   return Icons.thunderstorm_rounded;
 }
 
-
-List<Color> _heroColors(
-  BuildContext context,
-  int code,
-  DateTime now,
-  DateTime sunrise,
-  DateTime sunset,
-) {
-  final scheme = Theme.of(context).colorScheme;
-  final isNight = now.isBefore(sunrise) || now.isAfter(sunset);
-
-  if (isNight) {
-    return [
-      scheme.surfaceContainerHighest,
-      scheme.primaryContainer,
-    ];
-  }
-  if (code >= 51 && code <= 99) {
-    return [
-      scheme.secondaryContainer,
-      scheme.surfaceContainerHighest,
-    ];
-  }
-  if (code >= 71 && code <= 86) {
-    return [
-      scheme.tertiaryContainer,
-      scheme.surfaceContainerLow,
-    ];
-  }
-  return [
-    scheme.primaryContainer,
-    scheme.secondaryContainer,
-  ];
-}
 
 
 class _SunMoonCard extends StatelessWidget {
