@@ -239,76 +239,21 @@ class WeatherHomeScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 22),
-                  _SectionTitle(title: 'پیش‌بینی ساعتی'),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 126,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: data.hourly.length > 24 ? 24 : data.hourly.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 10),
-                      itemBuilder: (context, index) {
-                        final hour = data.hourly[index];
-                        return Container(
-                          width: 78,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: index == 0
-                                ? Theme.of(context).colorScheme.primaryContainer
-                                : Theme.of(context).colorScheme.surface,
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .outlineVariant
-                                  .withValues(alpha: .45),
-                            ),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                toPersianDigits(
-                                      hour.time.hour.toString().padLeft(2, '0'),
-                                    ) +
-                                    ':۰۰',
-                              ),
-                              Icon(_weatherIcon(hour.weatherCode)),
-                              Text(
-                                toPersianDigits(hour.temperature.round()) + '°',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 18,
-                                ),
-                              ),
-                              Text(
-                                toPersianDigits(
-                                      hour.precipitationProbability,
-                                    ) +
-                                    '٪',
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 16),
                   TemperatureTrendCard(hours: data.hourly),
                   const SizedBox(height: 22),
                   _SectionTitle(title: 'وضعیت هوا'),
                   const SizedBox(height: 10),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 1.7,
-                    children: [
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: GridView.count(
+                        crossAxisCount: 2,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        mainAxisSpacing: 6,
+                        crossAxisSpacing: 6,
+                        childAspectRatio: 1.7,
+                        children: [
                       aqi.when(
                         loading: () => const _InfoCard(
                           icon: Icons.air_rounded,
@@ -375,7 +320,9 @@ class WeatherHomeScreen extends ConsumerWidget {
                             ' km',
                         subtitle: 'دید افقی',
                       ),
-                    ],
+                        ],
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 22),
                   _SectionTitle(title: '۱۰ روز آینده'),
@@ -516,9 +463,10 @@ class _InfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = _metricAccent(title);
-    return Card(
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+          borderRadius: BorderRadius.circular(22),
           onTap: onTap,
           child: Container(
             decoration: BoxDecoration(
@@ -530,6 +478,7 @@ class _InfoCard extends StatelessWidget {
                   Theme.of(context).colorScheme.surface,
                 ],
               ),
+              borderRadius: BorderRadius.circular(22),
             ),
             child: Padding(
           padding: const EdgeInsets.all(14),
@@ -554,7 +503,6 @@ class _InfoCard extends StatelessWidget {
               Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
-        ),
         ),
         ),
       );
