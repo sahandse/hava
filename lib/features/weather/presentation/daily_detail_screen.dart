@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:hava/core/date/persian_date.dart';
 import 'package:hava/core/format/persian_digits.dart';
+import 'package:hava/core/widgets/soft_reveal.dart';
 import 'package:hava/features/weather/domain/weather_models.dart';
 import 'package:hava/features/weather/presentation/widgets/temperature_trend_card.dart';
+import 'package:hava/features/weather/presentation/widgets/weather_palette.dart';
+import 'package:hava/features/weather/presentation/widgets/weather_scene.dart';
 
 class DailyDetailScreen extends StatelessWidget {
   const DailyDetailScreen({
@@ -22,25 +25,40 @@ class DailyDetailScreen extends StatelessWidget {
           hour.time.day == day.date.day;
     }).toList();
 
+    final palette = WeatherPalette.resolve(
+      weatherCode: day.weatherCode,
+      now: DateTime(day.date.year, day.date.month, day.date.day, 12),
+      sunrise: day.sunrise,
+      sunset: day.sunset,
+      brightness: Theme.of(context).brightness,
+    );
+
     return Scaffold(
       appBar: AppBar(title: Text(persianDateLabel(day.date))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Container(
+          SoftReveal(
+            child: Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(30),
               gradient: LinearGradient(
                 begin: Alignment.topRight,
                 end: Alignment.bottomLeft,
-                colors: [
-                  Theme.of(context).colorScheme.primaryContainer,
-                  Theme.of(context).colorScheme.tertiaryContainer,
-                ],
+                colors: palette.colors,
               ),
             ),
-            child: Row(
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: WeatherScene(
+                    weatherCode: day.weatherCode,
+                    isNight: palette.isNight,
+                    accent: palette.accent,
+                  ),
+                ),
+                Row(
                 children: [
                   const Icon(Icons.calendar_today_rounded, size: 34),
                   const SizedBox(width: 14),
@@ -64,9 +82,12 @@ class DailyDetailScreen extends StatelessWidget {
                   ),
                 ],
               ),
+              ],
+            ),
+          ),
           ),
           const SizedBox(height: 12),
-          TemperatureTrendCard(hours: dayHours),
+          SoftReveal(child: TemperatureTrendCard(hours: dayHours)),
           const SizedBox(height: 12),
           GridView.count(
             shrinkWrap: true,
