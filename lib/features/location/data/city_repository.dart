@@ -59,11 +59,15 @@ class CityRepository {
       }
     }
 
-    best ??= results
-        .cast<Map<String, dynamic>>()
-        .where((item) => (item['country_code'] as String?)?.toUpperCase() == 'IR')
-        .cast<Map<String, dynamic>?>()
-        .firstWhere((_) => true, orElse: () => null);
+    if (best == null) {
+      for (final item in results) {
+        final map = item as Map<String, dynamic>;
+        if ((map['country_code'] as String?)?.toUpperCase() == 'IR') {
+          best = map;
+          break;
+        }
+      }
+    }
 
     best ??= results.first as Map<String, dynamic>;
     return City.fromJson(best);
