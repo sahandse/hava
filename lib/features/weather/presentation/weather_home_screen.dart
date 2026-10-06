@@ -6,6 +6,8 @@ import 'package:hava/features/air_quality/application/air_quality_controller.dar
 import 'package:hava/features/location/application/city_controller.dart';
 import 'package:hava/features/location/presentation/city_search_screen.dart';
 import 'package:hava/features/weather/application/weather_controller.dart';
+import 'package:hava/features/weather/domain/weather_summary.dart';
+import 'package:hava/features/weather/presentation/daily_detail_screen.dart';
 import 'package:hava/features/weather/presentation/widgets/temperature_trend_card.dart';
 
 class WeatherHomeScreen extends ConsumerWidget {
@@ -30,6 +32,19 @@ class WeatherHomeScreen extends ConsumerWidget {
             final nowVisibility = data.hourly.isNotEmpty
                 ? data.hourly.first.visibility / 1000
                 : 0.0;
+            final today = data.daily.first;
+            final summary = buildWeatherSummary(
+              current: current,
+              today: today,
+              hourly: data.hourly,
+            );
+            final heroColors = _heroColors(
+              context,
+              current.weatherCode,
+              current.updatedAt,
+              today.sunrise,
+              today.sunset,
+            );
             return RefreshIndicator(
               onRefresh: () async {
                 ref.invalidate(weatherProvider);
@@ -99,10 +114,7 @@ class WeatherHomeScreen extends ConsumerWidget {
                       gradient: LinearGradient(
                         begin: Alignment.topRight,
                         end: Alignment.bottomLeft,
-                        colors: [
-                          Theme.of(context).colorScheme.primaryContainer,
-                          Theme.of(context).colorScheme.secondaryContainer,
-                        ],
+                        colors: heroColors,
                       ),
                     ),
                     child: Column(
@@ -124,6 +136,27 @@ class WeatherHomeScreen extends ConsumerWidget {
                                 current.apparentTemperature.round(),
                               ) +
                               '°',
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          summary,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            _MetricChip(
+                              icon: Icons.arrow_upward_rounded,
+                              label: 'بیشینه',
+                              value: toPersianDigits(today.maxTemperature.round()) + '°',
+                            ),
+                            const SizedBox(width: 8),
+                            _MetricChip(
+                              icon: Icons.arrow_downward_rounded,
+                              label: 'کمینه',
+                              value: toPersianDigits(today.minTemperature.round()) + '°',
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 22),
                         Wrap(
@@ -284,12 +317,23 @@ class WeatherHomeScreen extends ConsumerWidget {
                       padding: const EdgeInsets.all(8),
                       child: Column(
                         children: data.daily.map((day) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 12,
+                          return InkWell(
+                            borderRadius: BorderRadius.circular(18),
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute<void>(
+                                builder: (_) => DailyDetailScreen(
+                                  day: day,
+                                  hours: data.hourly,
+                                ),
+                              ),
                             ),
-                            child: Row(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 12,
+                              ),
+                              child: Row(
                               children: [
                                 SizedBox(
                                   width: 105,
@@ -326,6 +370,7 @@ class WeatherHomeScreen extends ConsumerWidget {
                                   ),
                                 ),
                               ],
+                            ),
                             ),
                           );
                         }).toList(),
@@ -529,4 +574,39 @@ IconData _weatherIcon(int code) {
   if (code <= 82) return Icons.grain_rounded;
   if (code <= 86) return Icons.ac_unit_rounded;
   return Icons.thunderstorm_rounded;
+}
+
+
+List<Color> _heroColors(
+  BuildContext context,
+  int code,
+  DateTime now,
+  DateTime sunrise,
+  DateTime sunset,
+) {
+  final scheme = Theme.of(context).colorScheme;
+  final isNight = now.isBefore(sunrise) || now.isAfter(sunset);
+
+  if (isNight) {
+    return [
+      scheme.surfaceContainerHighest,
+      scheme.primaryContainer,
+    ];
+  }
+  if (code >= 51 && code <= 99) {
+    return [
+      scheme.secondaryContainer,
+      scheme.surfaceContainerHighest,
+    ];
+  }
+  if (code >= 71 && code <= 86) {
+    return [
+      scheme.tertiaryContainer,
+      scheme.surfaceContainerLow,
+    ];
+  }
+  return [
+    scheme.primaryContainer,
+    scheme.secondaryContainer,
+  ];
 }
