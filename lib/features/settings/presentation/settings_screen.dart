@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hava/core/services/notification_service.dart';
+import 'package:hava/core/widgets/soft_reveal.dart';
 import 'package:hava/features/settings/application/settings_controller.dart';
 import 'package:hava/features/settings/presentation/alert_settings_screen.dart';
 
@@ -37,7 +38,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
         children: [
-          Container(
+          SoftReveal(
+            child: Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(28),
@@ -79,6 +81,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ],
             ),
+          ),
           ),
           const SizedBox(height: 24),
           const Text('ظاهر', style: TextStyle(fontWeight: FontWeight.w900)),
