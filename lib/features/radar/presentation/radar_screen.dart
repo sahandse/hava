@@ -86,17 +86,24 @@ class _RadarScreenState extends ConsumerState<RadarScreen> {
       final host = data['host'] as String?;
       final radar = data['radar'] as Map<String, dynamic>?;
       final past = radar?['past'] as List<dynamic>? ?? const [];
+      final nowcast = radar?['nowcast'] as List<dynamic>? ?? const [];
+      final rawFrames = <dynamic>[...past, ...nowcast];
 
-      final frames = past.map((item) {
-        final map = item as Map<String, dynamic>;
-        return _RadarFrame(
-          time: DateTime.fromMillisecondsSinceEpoch(
-            (map['time'] as num).toInt() * 1000,
-            isUtc: true,
-          ).toLocal(),
-          path: map['path'] as String,
-        );
-      }).toList();
+      final seen = <String>{};
+      final frames = rawFrames
+          .map((item) {
+            final map = item as Map<String, dynamic>;
+            return _RadarFrame(
+              time: DateTime.fromMillisecondsSinceEpoch(
+                (map['time'] as num).toInt() * 1000,
+                isUtc: true,
+              ).toLocal(),
+              path: map['path'] as String,
+            );
+          })
+          .where((frame) => seen.add(frame.path))
+          .toList()
+        ..sort((a, b) => a.time.compareTo(b.time));
 
       if (host == null || frames.isEmpty) {
         throw StateError('برای این لحظه فریم رادار موجود نیست.');
@@ -283,19 +290,18 @@ class _RadarScreenState extends ConsumerState<RadarScreen> {
                   ),
                   if (_metric == _ProbeMetric.radar)
                     TileLayer(
-                      key: ValueKey(frame.path),
+                      key: ValueKey(
+                        'radar-${frame.time.millisecondsSinceEpoch}-$_frameIndex',
+                      ),
                       urlTemplate:
                           '$_host${frame.path}/256/{z}/{x}/{y}/2/1_1.png',
                       userAgentPackageName: 'com.sahand.hava',
                       maxNativeZoom: 7,
                       maxZoom: 12,
-                      tileDisplay: const TileDisplay.fadeIn(),
-                      tileProvider: cacheStore == null
-                          ? null
-                          : CachedTileProvider(
-                              store: cacheStore,
-                              maxStale: const Duration(hours: 12),
-                            ),
+                      opacity: .88,
+                      tileDisplay: const TileDisplay.fadeIn(
+                        duration: Duration(milliseconds: 180),
+                      ),
                     ),
                   if (_showCoverage)
                     TileLayer(
@@ -442,7 +448,11 @@ class _RadarScreenState extends ConsumerState<RadarScreen> {
                     },
                     onSpeedChanged: _setSpeed,
                     onChanged: (value) {
-                      setState(() => _frameIndex = value.round());
+                      _timer?.cancel();
+                      setState(() {
+                        _playing = false;
+                        _frameIndex = value.round().clamp(0, _frames.length - 1);
+                      });
                     },
                   ),
                 ),
