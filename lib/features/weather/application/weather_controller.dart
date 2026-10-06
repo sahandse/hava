@@ -12,6 +12,7 @@ final weatherRepositoryProvider = Provider<OpenMeteoWeatherRepository>(
 
 final weatherProvider = FutureProvider<WeatherBundle>((ref) async {
   final city = ref.watch(selectedCityProvider);
+  final useCurrentLocation = ref.watch(currentLocationProvider);
 
   if (city != null) {
     final weather = await ref.read(weatherRepositoryProvider).fetch(
@@ -22,6 +23,10 @@ final weatherProvider = FutureProvider<WeatherBundle>((ref) async {
     return weather;
   }
 
+  if (!useCurrentLocation) {
+    throw StateError('ابتدا شهر یا شهرستان خودت را انتخاب کن.');
+  }
+
   var permission = await Geolocator.checkPermission();
   if (permission == LocationPermission.denied) {
     permission = await Geolocator.requestPermission();
@@ -29,7 +34,7 @@ final weatherProvider = FutureProvider<WeatherBundle>((ref) async {
 
   if (permission == LocationPermission.denied ||
       permission == LocationPermission.deniedForever) {
-    throw StateError('دسترسی موقعیت مکانی فعال نیست.');
+    throw StateError('برای موقعیت فعلی، دسترسی مکان لازم است.');
   }
 
   if (!await Geolocator.isLocationServiceEnabled()) {

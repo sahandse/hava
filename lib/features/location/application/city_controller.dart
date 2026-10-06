@@ -47,10 +47,53 @@ final selectedCityProvider =
 );
 
 class SelectedCityController extends Notifier<City?> {
+  static const selectedCityKey = 'selected_city';
+
   @override
   City? build() => null;
 
-  void select(City? city) {
+  Future<void> select(City? city) async {
     state = city;
+    final prefs = await SharedPreferences.getInstance();
+    if (city == null) {
+      await prefs.remove(selectedCityKey);
+    } else {
+      await prefs.setString(selectedCityKey, city.encode());
+      await prefs.setBool(CurrentLocationController.currentLocationKey, false);
+    }
+  }
+
+  void restore(City city) {
+    state = city;
+  }
+}
+
+final currentLocationProvider =
+    NotifierProvider<CurrentLocationController, bool>(
+  CurrentLocationController.new,
+);
+
+class CurrentLocationController extends Notifier<bool> {
+  static const currentLocationKey = 'current_location_selected';
+
+  @override
+  bool build() => false;
+
+  Future<void> enable() async {
+    state = true;
+    ref.read(selectedCityProvider.notifier).state = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(currentLocationKey, true);
+    await prefs.remove(SelectedCityController.selectedCityKey);
+  }
+
+  Future<void> disable() async {
+    state = false;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(currentLocationKey, false);
+  }
+
+  void restore(bool value) {
+    state = value;
   }
 }
