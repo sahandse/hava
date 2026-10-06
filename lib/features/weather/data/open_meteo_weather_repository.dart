@@ -88,7 +88,7 @@ class OpenMeteoWeatherRepository {
   String _cacheKey(double latitude, double longitude) {
     final lat = latitude.toStringAsFixed(3);
     final lon = longitude.toStringAsFixed(3);
-    return 'weather_cache_${lat}_${lon}';
+    return 'weather_cache_${lat}_$lon';
   }
 
   WeatherBundle _parse(Map<String, dynamic> data) {
