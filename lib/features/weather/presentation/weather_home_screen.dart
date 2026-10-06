@@ -111,20 +111,75 @@ class WeatherHomeScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   Container(
-                    padding: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(22),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(32),
+                      borderRadius: BorderRadius.circular(34),
                       gradient: LinearGradient(
                         begin: Alignment.topRight,
                         end: Alignment.bottomLeft,
                         colors: heroColors,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: heroColors.first.withValues(alpha: .22),
+                          blurRadius: 28,
+                          offset: const Offset(0, 14),
+                        ),
+                      ],
                     ),
-                    child: Column(
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          left: -26,
+                          top: -28,
+                          child: Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withValues(alpha: .12),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          right: -40,
+                          bottom: -46,
+                          child: Container(
+                            width: 150,
+                            height: 150,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withValues(alpha: .08),
+                            ),
+                          ),
+                        ),
+                        Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(_weatherIcon(current.weatherCode), size: 64),
-                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(13),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: .18),
+                                borderRadius: BorderRadius.circular(22),
+                              ),
+                              child: Icon(
+                                _weatherIcon(current.weatherCode),
+                                size: 40,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              _weatherLabel(current.weatherCode),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w900),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
                         Text(
                           toPersianDigits(current.temperature.round()) + '°',
                           style: Theme.of(context).textTheme.displayLarge?.copyWith(
@@ -133,12 +188,12 @@ class WeatherHomeScreen extends ConsumerWidget {
                               ),
                         ),
                         Text(
-                          _weatherLabel(current.weatherCode) +
-                              ' • احساسی ' +
+                          'احساسی ' +
                               toPersianDigits(
                                 current.apparentTemperature.round(),
                               ) +
                               '°',
+                          style: Theme.of(context).textTheme.bodyLarge,
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -163,8 +218,8 @@ class WeatherHomeScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 22),
                         Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
+                          spacing: 8,
+                          runSpacing: 8,
                           children: [
                             _MetricChip(
                               icon: Icons.water_drop_outlined,
@@ -189,6 +244,8 @@ class WeatherHomeScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 22),
                   _SectionTitle(title: 'پیش‌بینی ساعتی'),
@@ -202,13 +259,22 @@ class WeatherHomeScreen extends ConsumerWidget {
                       itemBuilder: (context, index) {
                         final hour = data.hourly[index];
                         return Container(
-                          width: 82,
-                          padding: const EdgeInsets.all(12),
+                          width: 78,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerLow,
-                            borderRadius: BorderRadius.circular(22),
+                            color: index == 0
+                                ? Theme.of(context).colorScheme.primaryContainer
+                                : Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .outlineVariant
+                                  .withValues(alpha: .45),
+                            ),
                           ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -250,7 +316,7 @@ class WeatherHomeScreen extends ConsumerWidget {
                     physics: const NeverScrollableScrollPhysics(),
                     mainAxisSpacing: 10,
                     crossAxisSpacing: 10,
-                    childAspectRatio: 1.55,
+                    childAspectRatio: 1.7,
                     children: [
                       aqi.when(
                         loading: () => const _InfoCard(
@@ -428,8 +494,8 @@ class _MetricChip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface.withValues(alpha: .55),
-          borderRadius: BorderRadius.circular(18),
+          color: Colors.white.withValues(alpha: .16),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -457,11 +523,24 @@ class _InfoCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) {
+    final accent = _metricAccent(title);
+    return Card(
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          child: Padding(
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: [
+                  accent.withValues(alpha: .16),
+                  Theme.of(context).colorScheme.surface,
+                ],
+              ),
+            ),
+            child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -486,7 +565,9 @@ class _InfoCard extends StatelessWidget {
           ),
         ),
         ),
+        ),
       );
+  }
 }
 
 class _LoadingState extends StatelessWidget {
@@ -654,5 +735,21 @@ class _SunMoonCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+
+Color _metricAccent(String title) {
+  switch (title) {
+    case 'کیفیت هوا':
+      return const Color(0xFF35C98B);
+    case 'UV':
+      return const Color(0xFFFFB547);
+    case 'فشار':
+      return const Color(0xFF8B7CFF);
+    case 'دید':
+      return const Color(0xFF55B8FF);
+    default:
+      return const Color(0xFF4B7BFF);
   }
 }
