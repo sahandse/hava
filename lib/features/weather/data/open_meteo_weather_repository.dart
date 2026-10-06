@@ -39,12 +39,18 @@ class OpenMeteoWeatherRepository {
             'precipitation_probability',
             'weather_code',
             'visibility',
+            'wind_speed_10m',
+            'uv_index',
           ].join(','),
           'daily': [
             'weather_code',
             'temperature_2m_max',
             'temperature_2m_min',
             'precipitation_probability_max',
+            'precipitation_sum',
+            'wind_speed_10m_max',
+            'uv_index_max',
+            'daylight_duration',
             'sunrise',
             'sunset',
           ].join(','),
@@ -122,6 +128,8 @@ class OpenMeteoWeatherRepository {
     final rain = (json['precipitation_probability'] as List).cast<num>();
     final codes = (json['weather_code'] as List).cast<num>();
     final visibility = (json['visibility'] as List).cast<num>();
+    final wind = (json['wind_speed_10m'] as List).cast<num>();
+    final uv = (json['uv_index'] as List).cast<num>();
 
     return List.generate(times.length, (index) {
       return HourlyWeather(
@@ -130,6 +138,8 @@ class OpenMeteoWeatherRepository {
         precipitationProbability: rain[index].toInt(),
         weatherCode: codes[index].toInt(),
         visibility: visibility[index].toDouble(),
+        windSpeed: wind[index].toDouble(),
+        uvIndex: uv[index].toDouble(),
       );
     });
   }
@@ -139,6 +149,10 @@ class OpenMeteoWeatherRepository {
     final max = (json['temperature_2m_max'] as List).cast<num>();
     final min = (json['temperature_2m_min'] as List).cast<num>();
     final rain = (json['precipitation_probability_max'] as List).cast<num>();
+    final rainSum = (json['precipitation_sum'] as List).cast<num>();
+    final wind = (json['wind_speed_10m_max'] as List).cast<num>();
+    final uv = (json['uv_index_max'] as List).cast<num>();
+    final daylight = (json['daylight_duration'] as List).cast<num>();
     final codes = (json['weather_code'] as List).cast<num>();
     final sunrise = (json['sunrise'] as List).cast<String>();
     final sunset = (json['sunset'] as List).cast<String>();
@@ -152,6 +166,10 @@ class OpenMeteoWeatherRepository {
         weatherCode: codes[index].toInt(),
         sunrise: DateTime.parse(sunrise[index]),
         sunset: DateTime.parse(sunset[index]),
+        precipitationSum: rainSum[index].toDouble(),
+        maxWindSpeed: wind[index].toDouble(),
+        uvIndexMax: uv[index].toDouble(),
+        daylightDuration: daylight[index].toDouble(),
       );
     });
   }

@@ -29,6 +29,8 @@ class HourlyWeather {
     required this.precipitationProbability,
     required this.weatherCode,
     required this.visibility,
+    required this.windSpeed,
+    required this.uvIndex,
   });
 
   final DateTime time;
@@ -36,6 +38,8 @@ class HourlyWeather {
   final int precipitationProbability;
   final int weatherCode;
   final double visibility;
+  final double windSpeed;
+  final double uvIndex;
 }
 
 class DailyWeather {
@@ -47,6 +51,10 @@ class DailyWeather {
     required this.weatherCode,
     required this.sunrise,
     required this.sunset,
+    required this.precipitationSum,
+    required this.maxWindSpeed,
+    required this.uvIndexMax,
+    required this.daylightDuration,
   });
 
   final DateTime date;
@@ -56,6 +64,10 @@ class DailyWeather {
   final int weatherCode;
   final DateTime sunrise;
   final DateTime sunset;
+  final double precipitationSum;
+  final double maxWindSpeed;
+  final double uvIndexMax;
+  final double daylightDuration;
 }
 
 class WeatherBundle {
