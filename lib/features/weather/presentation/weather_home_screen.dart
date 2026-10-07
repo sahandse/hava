@@ -7,8 +7,6 @@ import 'package:hava/features/air_quality/application/air_quality_controller.dar
 import 'package:hava/features/air_quality/presentation/air_quality_detail_screen.dart';
 import 'package:hava/features/location/application/city_controller.dart';
 import 'package:hava/features/weather/application/weather_controller.dart';
-import 'package:hava/features/weather/domain/weather_models.dart';
-import 'package:hava/features/weather/domain/moon_phase.dart';
 import 'package:hava/features/weather/presentation/daily_detail_screen.dart';
 import 'package:hava/features/weather/presentation/widgets/temperature_trend_card.dart';
 import 'package:hava/features/weather/presentation/widgets/weather_palette.dart';
@@ -33,9 +31,6 @@ class WeatherHomeScreen extends ConsumerWidget {
           ),
           data: (data) {
             final current = data.current;
-            final nowVisibility = data.hourly.isNotEmpty
-                ? data.hourly.first.visibility / 1000
-                : 0.0;
             final today = data.daily.first;
             final weeklyMin = data.daily
                 .map((day) => day.minTemperature)
@@ -334,70 +329,6 @@ class _MetricChip extends StatelessWidget {
       );
 }
 
-class _InfoCard extends StatelessWidget {
-  const _InfoCard({
-    required this.icon,
-    required this.title,
-    required this.value,
-    required this.subtitle,
-    this.onTap,
-  });
-  final IconData icon;
-  final String title;
-  final String value;
-  final String subtitle;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = _metricAccent(title);
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-          borderRadius: BorderRadius.circular(22),
-          onTap: onTap,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
-                colors: [
-                  accent.withValues(alpha: .16),
-                  Theme.of(context).colorScheme.surface,
-                ],
-              ),
-              borderRadius: BorderRadius.circular(22),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(icon, size: 19),
-                      const SizedBox(width: 6),
-                      Text(title, style: Theme.of(context).textTheme.bodySmall),
-                    ],
-                  ),
-                  const Spacer(),
-                  Text(
-                    value,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w900),
-                  ),
-                  Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-  }
-}
-
 class _LoadingState extends StatelessWidget {
   const _LoadingState();
   @override
@@ -449,19 +380,6 @@ class _ErrorState extends StatelessWidget {
       );
 }
 
-String _time(DateTime time) =>
-    toPersianDigits(time.hour.toString().padLeft(2, '0')) +
-    ':' +
-    toPersianDigits(time.minute.toString().padLeft(2, '0'));
-
-String _uvLabel(double value) {
-  if (value < 3) return 'کم';
-  if (value < 6) return 'متوسط';
-  if (value < 8) return 'زیاد';
-  if (value < 11) return 'خیلی زیاد';
-  return 'بسیار شدید';
-}
-
 String _weatherLabel(int code) {
   if (code == 0) return 'صاف';
   if (code <= 3) return 'نیمه‌ابری';
@@ -484,69 +402,6 @@ IconData _weatherIcon(int code) {
   return Icons.thunderstorm_rounded;
 }
 
-
-
-class _SunMoonCard extends StatelessWidget {
-  const _SunMoonCard({required this.day});
-
-  final DailyWeather day;
-
-  @override
-  Widget build(BuildContext context) {
-    final moon = moonPhaseFor(day.date);
-    final daylightHours = day.daylightDuration / 3600;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.wb_twilight_rounded),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'طلوع ${_time(day.sunrise)}  •  غروب ${_time(day.sunset)}',
-                  ),
-                ),
-              ],
-            ),
-            const Divider(height: 24),
-            Row(
-              children: [
-                Text(moon.symbol, style: const TextStyle(fontSize: 28)),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    '${moon.name} • روشنایی روز '
-                    '${toPersianDigits(daylightHours.toStringAsFixed(1))} ساعت',
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-
-Color _metricAccent(String title) {
-  switch (title) {
-    case 'کیفیت هوا':
-      return const Color(0xFF35C98B);
-    case 'UV':
-      return const Color(0xFFFFB547);
-    case 'فشار':
-      return const Color(0xFF8B7CFF);
-    case 'دید':
-      return const Color(0xFF55B8FF);
-    default:
-      return const Color(0xFF4B7BFF);
-  }
-}
 
 
 class _TemperatureRangeBar extends StatelessWidget {
