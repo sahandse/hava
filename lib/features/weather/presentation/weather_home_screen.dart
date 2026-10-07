@@ -6,9 +6,7 @@ import 'package:hava/core/widgets/soft_reveal.dart';
 import 'package:hava/features/air_quality/application/air_quality_controller.dart';
 import 'package:hava/features/air_quality/presentation/air_quality_detail_screen.dart';
 import 'package:hava/features/location/application/city_controller.dart';
-import 'package:hava/features/location/presentation/city_search_screen.dart';
 import 'package:hava/features/weather/application/weather_controller.dart';
-import 'package:hava/features/weather/domain/weather_summary.dart';
 import 'package:hava/features/weather/domain/weather_models.dart';
 import 'package:hava/features/weather/domain/moon_phase.dart';
 import 'package:hava/features/weather/presentation/daily_detail_screen.dart';
@@ -45,11 +43,6 @@ class WeatherHomeScreen extends ConsumerWidget {
             final weeklyMax = data.daily
                 .map((day) => day.maxTemperature)
                 .reduce((a, b) => a > b ? a : b);
-            final summary = buildWeatherSummary(
-              current: current,
-              today: today,
-              hourly: data.hourly,
-            );
             final palette = WeatherPalette.resolve(
               weatherCode: current.weatherCode,
               now: current.updatedAt,
@@ -71,51 +64,26 @@ class WeatherHomeScreen extends ConsumerWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(18),
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute<void>(
-                              builder: (_) => const CitySearchScreen(),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              city?.name ?? 'موقعیت فعلی',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w900),
                             ),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 8,
-                              horizontal: 2,
+                            const SizedBox(height: 2),
+                            Text(
+                              persianDateLabel(DateTime.now()),
+                              style: Theme.of(context).textTheme.bodySmall,
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  city?.name ?? 'موقعیت فعلی',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleLarge
-                                      ?.copyWith(
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                                Text(
-                                  persianDateLabel(DateTime.now()),
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ],
-                            ),
-                          ),
+                          ],
                         ),
                       ),
                       IconButton.filledTonal(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute<void>(
-                            builder: (_) => const CitySearchScreen(),
-                          ),
-                        ),
-                        icon: const Icon(Icons.location_on_outlined),
-                      ),
-                      const SizedBox(width: 6),
-                      IconButton.filledTonal(
+                        tooltip: 'بروزرسانی',
                         onPressed: () => ref.invalidate(weatherProvider),
                         icon: const Icon(Icons.refresh_rounded),
                       ),
@@ -195,11 +163,7 @@ class WeatherHomeScreen extends ConsumerWidget {
                               '°',
                           style: Theme.of(context).textTheme.bodyLarge,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          summary,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
+
                         const SizedBox(height: 14),
                         Row(
                           children: [
@@ -216,32 +180,7 @@ class WeatherHomeScreen extends ConsumerWidget {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 22),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _MetricChip(
-                              icon: Icons.water_drop_outlined,
-                              label: 'رطوبت',
-                              value: toPersianDigits(current.humidity) + '٪',
-                            ),
-                            _MetricChip(
-                              icon: Icons.air_rounded,
-                              label: 'باد',
-                              value: toPersianDigits(
-                                    current.windSpeed.round(),
-                                  ) +
-                                  ' km/h',
-                            ),
-                            _MetricChip(
-                              icon: Icons.grain_rounded,
-                              label: 'بارش',
-                              value: toPersianDigits(current.precipitation) +
-                                  ' mm',
-                            ),
-                          ],
-                        ),
+
                       ],
                     ),
                       ],
@@ -249,98 +188,36 @@ class WeatherHomeScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 22),
                   SoftReveal(child: TemperatureTrendCard(hours: data.hourly)),
-                  const SizedBox(height: 22),
-                  _SectionTitle(title: 'وضعیت هوا'),
-                  const SizedBox(height: 10),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: GridView.count(
-                        crossAxisCount: 2,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        mainAxisSpacing: 6,
-                        crossAxisSpacing: 6,
-                        childAspectRatio: 1.7,
-                        children: [
-                      aqi.when(
-                        loading: () => const _InfoCard(
-                          icon: Icons.air_rounded,
-                          title: 'کیفیت هوا',
-                          value: '...',
-                          subtitle: 'در حال دریافت',
-                        ),
-                        error: (_, __) => const _InfoCard(
-                          icon: Icons.air_rounded,
-                          title: 'کیفیت هوا',
-                          value: '—',
-                          subtitle: 'در دسترس نیست',
-                        ),
-                        data: (value) => _InfoCard(
-                          icon: Icons.air_rounded,
-                          title: 'کیفیت هوا',
-                          value: toPersianDigits(value.usAqi),
-                          subtitle: value.label,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute<void>(
-                              builder: (_) => AirQualityDetailScreen(
-                                airQuality: value,
-                              ),
+                  const SizedBox(height: 18),
+                  aqi.when(
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
+                    data: (value) => Card(
+                      child: ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.air_rounded),
+                        title: Text('کیفیت هوا: ${value.label}'),
+                        subtitle: Text('AQI ${toPersianDigits(value.usAqi)} • UV ${toPersianDigits(value.uvIndex.toStringAsFixed(1))}'),
+                        trailing: const Icon(Icons.chevron_left_rounded),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (_) => AirQualityDetailScreen(
+                              airQuality: value,
                             ),
                           ),
                         ),
                       ),
-                      aqi.when(
-                        loading: () => const _InfoCard(
-                          icon: Icons.wb_sunny_outlined,
-                          title: 'UV',
-                          value: '...',
-                          subtitle: 'شاخص فرابنفش',
-                        ),
-                        error: (_, __) => const _InfoCard(
-                          icon: Icons.wb_sunny_outlined,
-                          title: 'UV',
-                          value: '—',
-                          subtitle: 'در دسترس نیست',
-                        ),
-                        data: (value) => _InfoCard(
-                          icon: Icons.wb_sunny_outlined,
-                          title: 'UV',
-                          value: toPersianDigits(value.uvIndex.toStringAsFixed(1)),
-                          subtitle: _uvLabel(value.uvIndex),
-                        ),
-                      ),
-                      _InfoCard(
-                        icon: Icons.speed_rounded,
-                        title: 'فشار',
-                        value: toPersianDigits(
-                              current.surfacePressure.round(),
-                            ) +
-                            ' hPa',
-                        subtitle: 'فشار سطح',
-                      ),
-                      _InfoCard(
-                        icon: Icons.visibility_outlined,
-                        title: 'دید',
-                        value: toPersianDigits(
-                              nowVisibility.toStringAsFixed(1),
-                            ) +
-                            ' km',
-                        subtitle: 'دید افقی',
-                      ),
-                        ],
-                      ),
                     ),
                   ),
                   const SizedBox(height: 22),
-                  _SectionTitle(title: '۱۰ روز آینده'),
+                  _SectionTitle(title: '۵ روز آینده'),
                   const SizedBox(height: 10),
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(8),
                       child: Column(
-                        children: data.daily.map((day) {
+                        children: data.daily.take(5).map((day) {
                           return InkWell(
                             borderRadius: BorderRadius.circular(18),
                             onTap: () => Navigator.push(
@@ -405,8 +282,6 @@ class WeatherHomeScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  SoftReveal(child: _SunMoonCard(day: data.daily.first)),
                 ],
               ),
             );
