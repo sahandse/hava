@@ -1,0 +1,21 @@
+name: Fetch Bundletool
+
+on:
+  push:
+    paths:
+      - .github/workflows/fetch-bundletool.yml
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download bundletool
+        run: |
+          curl -L --fail -o bundletool-all-1.18.3.jar             https://github.com/google/bundletool/releases/download/1.18.3/bundletool-all-1.18.3.jar
+          java -jar bundletool-all-1.18.3.jar version
+      - name: Upload bundletool
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundletool-1.18.3
+          path: bundletool-all-1.18.3.jar
+          retention-days: 1
